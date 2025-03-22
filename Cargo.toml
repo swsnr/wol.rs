@@ -1,0 +1,27 @@
+[package]
+name = "wol"
+version = "0.1.0"
+description = "Wake up remote hosts with magic packets (Wake On Lan)"
+homepage = "https://github.com/swsnr/wol"
+# TODO: README
+license = "MPL-2.0"
+keywords = ["WakeOnLan", "Magic packet"]
+# TODO: Categories
+authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
+edition = "2024"
+
+[dependencies]
+
+[package.metadata.release]
+pre-release-commit-message = "Release {{version}}"
+tag-prefix = ""
+tag-message = "Version {{tag_name}}"
+# Github Actions does this for us
+verify = false
+# The release workflow does this for us
+publish = false
+# We push commit and tag separately to make sure the release workflow only runs
+# if the pipeline's good; release tag rules will prevent us from pushing a tag
+# for a commit which is not green
+push = false
+
