@@ -217,7 +217,7 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
         IpAddr::from(Ipv4Addr::UNSPECIFIED)
     };
     let socket = UdpSocket::bind((bind_address, 0))?;
-    socket.send_magic_packet(target.hardware_address, target.socket_addr)
+    socket.send_magic_packet(target.hardware_address, None, target.socket_addr)
 }
 
 fn main() -> ExitCode {
