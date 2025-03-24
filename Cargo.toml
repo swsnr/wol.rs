@@ -10,7 +10,15 @@ keywords = ["WakeOnLan", "Magic packet"]
 authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2024"
 
+[features]
+cli = []
+
+[[bin]]
+name = "wol"
+required-features = ["cli"]
+
 [dependencies]
+macaddr = { version = "1.0.1", default-features = false }
 
 [package.metadata.release]
 pre-release-commit-message = "Release {{version}}"
@@ -24,4 +32,3 @@ publish = false
 # if the pipeline's good; release tag rules will prevent us from pushing a tag
 # for a commit which is not green
 push = false
-
