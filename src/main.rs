@@ -37,19 +37,96 @@
 // )]
 
 use std::{
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    fmt::Display,
+    io::ErrorKind,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket},
     path::PathBuf,
+    process::ExitCode,
     str::FromStr,
+    thread::sleep,
     time::Duration,
 };
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
 use wol::MacAddr6;
 
+#[derive(Debug)]
+struct ResolvedWakeUpTarget {
+    hardware_address: MacAddr6,
+    socket_addrs: Vec<SocketAddr>,
+    bind_address: IpAddr,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ResolveMode {
+    Default,
+    PreferIpv6,
+}
+
+impl Default for ResolveMode {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+#[derive(Debug)]
+struct WakeUpTarget {
+    hardware_address: MacAddr6,
+    host: Host,
+    port: u16,
+}
+
+impl WakeUpTarget {
+    fn resolve(&self, mode: ResolveMode) -> std::io::Result<ResolvedWakeUpTarget> {
+        match &self.host {
+            Host::Dns(dns) => {
+                let socket_addrs = (dns.as_str(), self.port).to_socket_addrs()?;
+                let socket_addrs: Vec<_> = match mode {
+                    ResolveMode::Default => socket_addrs.collect(),
+                    ResolveMode::PreferIpv6 => socket_addrs.filter(|addr| addr.is_ipv6()).collect(),
+                };
+                if socket_addrs.is_empty() {
+                    Err(std::io::Error::new(
+                        ErrorKind::HostUnreachable,
+                        format!("Host {dns} not reachable"),
+                    ))
+                } else {
+                    let bind_address = match mode {
+                        ResolveMode::Default => Ipv4Addr::UNSPECIFIED.into(),
+                        ResolveMode::PreferIpv6 => Ipv6Addr::UNSPECIFIED.into(),
+                    };
+                    Ok(ResolvedWakeUpTarget {
+                        hardware_address: self.hardware_address,
+                        socket_addrs,
+                        bind_address,
+                    })
+                }
+            }
+            Host::Ip(ip_addr) => Ok(ResolvedWakeUpTarget {
+                hardware_address: self.hardware_address,
+                socket_addrs: vec![SocketAddr::new(*ip_addr, self.port)],
+                bind_address: match ip_addr {
+                    IpAddr::V4(_) => Ipv4Addr::UNSPECIFIED.into(),
+                    IpAddr::V6(_) => Ipv6Addr::UNSPECIFIED.into(),
+                },
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Host {
     Dns(String),
     Ip(IpAddr),
+}
+
+impl Display for Host {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Host::Dns(dns) => write!(f, "{dns}"),
+            Host::Ip(ip_addr) => write!(f, "{ip_addr}"),
+        }
+    }
 }
 
 impl From<String> for Host {
@@ -81,7 +158,13 @@ struct CliArgs {
         default_value_if("ipv6", ArgPredicate::IsPresent, Some("ff02::1"))
     )]
     host: Host,
-    /// Send the magic packet with IPv6 instead of IPv4.
+    /// Prefer IPv6 addresses over IPv4 for DNS resolution.
+    ///
+    /// This only affects DNS resolution for hostnames given to --host; literal
+    /// IPv4 and IPv6 addresses will always use the respective protocol.
+    ///
+    /// If omitted use the first resolved address returned by the operating system,
+    /// regardless of whether it is an IPv4 or IPv6 address.
     #[arg(short = '6', long = "ipv6")]
     ipv6: bool,
     /// Send the magic packet to this port instead of the default.
@@ -95,8 +178,6 @@ struct CliArgs {
     #[arg(short = 'v', long = "verbose")]
     verbose: bool,
     /// Wait for given number of milliseconds after each magic packet.
-    ///
-    /// If `0` do not wait, but send packets sequentially.  If omitted, send all packets at once.
     #[arg(
         short = 'w',
         long = "wait",
@@ -114,7 +195,58 @@ struct CliArgs {
     hardware_addresses: Vec<wol::MacAddr6>,
 }
 
-fn main() {
+impl CliArgs {
+    fn targets(&self) -> impl Iterator<Item = WakeUpTarget> {
+        self.hardware_addresses
+            .iter()
+            .map(|hardware_address| WakeUpTarget {
+                hardware_address: *hardware_address,
+                host: self.host.clone(),
+                port: self.port,
+            })
+    }
+
+    fn resolve_mode(&self) -> ResolveMode {
+        if self.ipv6 {
+            ResolveMode::PreferIpv6
+        } else {
+            ResolveMode::Default
+        }
+    }
+}
+
+fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::Result<()> {
+    if verbose {
+        println!(
+            "Waking up {} with {}:{}...",
+            target.hardware_address, target.host, target.port
+        );
+    } else {
+        println!("Waking up {}...", target.hardware_address)
+    }
+    let target = target.resolve(mode)?;
+    let socket = UdpSocket::bind((target.bind_address, 0))?;
+    let mut packet = [0; 102];
+    wol::fill_magic_packet(&mut packet, target.hardware_address);
+    socket.send_to(&packet, target.socket_addrs.as_slice())?;
+    Ok(())
+}
+
+fn main() -> ExitCode {
     let args = CliArgs::parse();
-    dbg!(args);
+    let resolve_mode = args.resolve_mode();
+
+    let mut return_code = ExitCode::SUCCESS;
+    for (i, target) in args.targets().enumerate() {
+        if 0 < i {
+            if let Some(wait) = args.wait.filter(|d| !d.is_zero()) {
+                sleep(wait);
+            }
+        }
+        if let Err(error) = wakeup(&target, resolve_mode, args.verbose) {
+            eprintln!("Failed to wake up {}: {error}", target.hardware_address);
+            return_code = ExitCode::FAILURE;
+        }
+    }
+    return_code
 }
