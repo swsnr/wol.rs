@@ -34,6 +34,7 @@ jobs:
       - run: cargo build --features cli
       - run: cargo clippy --all-targets --all-features
       - run: cargo test --all-features
+      - run: cargo doc
       - name: cargo deny check
         uses: EmbarkStudios/cargo-deny-action@v2
         with:

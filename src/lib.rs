@@ -19,7 +19,7 @@
     clippy::undocumented_unsafe_blocks,
     clippy::unnecessary_safety_comment,
     clippy::unnecessary_safety_doc,
-    // We must use Gtk's APIs to exit the app.
+    // We should not exit here
     clippy::exit,
     // Don't panic carelessly
     clippy::get_unwrap,
@@ -39,7 +39,38 @@
 )]
 #![allow(clippy::enum_glob_use, clippy::module_name_repetitions)]
 
+//! Wake on LAN magic packets.
+//!
+//! ## Send magic packets
+//!
+//! [`send_magic_packet`] provides a convenience function to send a single packet:
+//!
+//! ```no_run
+//! use std::str::FromStr;
+//! use std::net::Ipv4Addr;
+//! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
+//! wol::send_magic_packet(mac_address, (Ipv4Addr::BROADCAST, 9).into()).unwrap();
+//! ```
+//!
+//! For more control, create the [`std::net::UdpSocket`] yourself:
+//!
+//! ```no_run
+//! use std::str::FromStr;
+//! use std::net::{Ipv4Addr, UdpSocket};
+//! use wol::SendMagicPacket;
+//! let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
+//! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
+//!
+//! socket.send_magic_packet(mac_address, (Ipv4Addr::BROADCAST, 9)).unwrap();
+//! ```
+//!
+//! ## Assemble magic packets
+//!
+//! To send magic packets over other socket APIs, use [`fill_magic_packet`] or [`write_magic_packet`]
+//! to assmble magic packets.
+
 use std::io::Write;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
 
 /// MAC address types.
 pub use macaddr;
@@ -67,6 +98,70 @@ pub fn write_magic_packet<W: Write>(sink: &mut W, mac_address: MacAddr6) -> std:
         sink.write_all(mac_address.as_bytes())?;
     }
     Ok(())
+}
+
+pub trait SendMagicPacket {
+    /// Send a magic packet for `mac_address` to `addr` over this socket.
+    ///
+    /// # Target address
+    ///
+    /// Normally, you would send the packet to the broadcast address (IPv4) or
+    /// the link-local multicast address (IPv6), but you may specify any address
+    /// as long as the target host will *physically see* the packet along its
+    /// way to the target address.
+    ///
+    /// Any target port will do, since the magic packet never makes it to the
+    /// operating system where ports matter; the NIC will directly process it.
+    ///
+    /// Port `9` (discard) is often a good choice, because no service will
+    /// listen on this port.
+    ///
+    /// # Errors
+    ///
+    /// Return any errors from the underlying socket I/O.
+    fn send_magic_packet<A: ToSocketAddrs>(
+        &self,
+        mac_address: MacAddr6,
+        addr: A,
+    ) -> std::io::Result<()>;
+}
+
+impl SendMagicPacket for UdpSocket {
+    fn send_magic_packet<A: ToSocketAddrs>(
+        &self,
+        mac_address: MacAddr6,
+        addr: A,
+    ) -> std::io::Result<()> {
+        let mut packet = [0; 102];
+        fill_magic_packet(&mut packet, mac_address);
+        let size = self.send_to(&packet, addr)?;
+        // `send_to` won't send partial data until i32::MAX, according to
+        // `UdpSocket::send-to`, so if we get a partial write nonetheless
+        // something's seriously wrong, and we should just crash for satefy.
+        assert!(size == packet.len());
+        Ok(())
+    }
+}
+
+/// Send a magic packet for `mac_address` to `addr`.
+///
+/// This convenience method binds an UDP socket, and sends a single magic packet
+/// for `mac_address` to `addr`.
+///
+/// To send an magic packet over an existing UDP socket, see [`SendMagicPacket`].
+///
+/// # Errors
+///
+/// Return errors from underlying socket I/O.
+pub fn send_magic_packet(mac_address: MacAddr6, addr: SocketAddr) -> std::io::Result<()> {
+    let bind_address = if addr.is_ipv4() {
+        IpAddr::from(Ipv4Addr::UNSPECIFIED)
+    } else {
+        IpAddr::from(Ipv6Addr::UNSPECIFIED)
+    };
+    let socket = UdpSocket::bind((bind_address, 0))?;
+    socket.set_broadcast(true)?;
+    socket.send_magic_packet(mac_address, addr)
 }
 
 #[cfg(test)]
