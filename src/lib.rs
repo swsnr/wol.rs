@@ -15,10 +15,6 @@
     clippy::unimplemented,
     clippy::use_debug,
     clippy::todo,
-    // Require correct safety docs
-    clippy::undocumented_unsafe_blocks,
-    clippy::unnecessary_safety_comment,
-    clippy::unnecessary_safety_doc,
     // We should not exit here
     clippy::exit,
     // Don't panic carelessly
@@ -37,7 +33,7 @@
     // Disable as casts
     clippy::as_conversions,
 )]
-#![allow(clippy::enum_glob_use, clippy::module_name_repetitions)]
+#![forbid(unsafe_code)]
 
 //! Wake on LAN magic packets.
 //!
