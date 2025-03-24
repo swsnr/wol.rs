@@ -224,6 +224,16 @@ fn main() -> ExitCode {
     let args = CliArgs::parse();
     let resolve_mode = args.resolve_mode();
 
+    #[allow(clippy::todo)]
+    if args.passwd.is_some() {
+        todo!("SecureON");
+    }
+
+    #[allow(clippy::todo)]
+    if args.file.is_some() {
+        todo!("Wakeup files");
+    }
+
     let mut return_code = ExitCode::SUCCESS;
     for (i, target) in args.targets().enumerate() {
         if 0 < i {
