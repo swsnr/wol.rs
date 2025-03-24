@@ -1,7 +1,7 @@
 [package]
 name = "wol"
 version = "0.1.0"
-description = "Wake up remote hosts with magic packets (Wake On Lan)"
+description = "Wake up remote hosts with Wake On LAN magic packets"
 homepage = "https://github.com/swsnr/wol"
 # TODO: README
 license = "MPL-2.0"
@@ -11,14 +11,16 @@ authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2024"
 
 [features]
-cli = []
+cli = ["dep:clap"]
 
 [[bin]]
 name = "wol"
 required-features = ["cli"]
 
 [dependencies]
-macaddr = { version = "1.0.1", default-features = false }
+macaddr = "1.0.1"
+# Optional dependencies for CLI
+clap = { version = "4.5.32", features = ["derive"], optional = true }
 
 [package.metadata.release]
 pre-release-commit-message = "Release {{version}}"

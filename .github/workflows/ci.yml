@@ -31,6 +31,7 @@ jobs:
           key: ${{ runner.os }}-rust-${{ steps.toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo fmt --check
       - run: cargo build
+      - run: cargo build --features cli
       - run: cargo clippy --all-targets --all-features
       - run: cargo test --all-features
       - name: cargo deny check
