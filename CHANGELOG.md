@@ -12,6 +12,8 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+## [0.2.1] – 2025-03-25
+
 ### Added
 - Publish to crates.io
 
@@ -19,5 +21,6 @@ Github workflows then take care of building release artifacts and publishing the
 
 Preliminary release of command line utility and crate.
 
-[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/swsnr/wol.rs/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/swsnr/wol.rs/releases/tag/v0.2.0
