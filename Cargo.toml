@@ -3,10 +3,10 @@ name = "wol"
 version = "0.1.0"
 description = "Wake up remote hosts with Wake On LAN magic packets"
 homepage = "https://github.com/swsnr/wol"
-# TODO: README
+readme = "README.md"
 license = "MPL-2.0"
-keywords = ["WakeOnLan", "Magic packet"]
-# TODO: Categories
+keywords = ["WakeOnLan", "magic-packet", "WOL", "SecureON"]
+categories = ["command-line-utilities", "network-programming"]
 authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2024"
 
