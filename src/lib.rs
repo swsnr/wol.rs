@@ -45,7 +45,7 @@
 //! use std::str::FromStr;
 //! use std::net::Ipv4Addr;
 //! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
-//! wol::send_magic_packet(mac_address, (Ipv4Addr::BROADCAST, 9).into()).unwrap();
+//! wol::send_magic_packet(mac_address, None, (Ipv4Addr::BROADCAST, 9).into()).unwrap();
 //! ```
 //!
 //! For more control, create the [`std::net::UdpSocket`] yourself:
@@ -57,7 +57,7 @@
 //! let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
 //! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
 //!
-//! socket.send_magic_packet(mac_address, (Ipv4Addr::BROADCAST, 9)).unwrap();
+//! socket.send_magic_packet(mac_address, None, (Ipv4Addr::BROADCAST, 9)).unwrap();
 //! ```
 //!
 //! ## Assemble magic packets
