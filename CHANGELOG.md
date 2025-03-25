@@ -1,0 +1,20 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+To make a release run [cargo release](https://github.com/crate-ci/cargo-release),
+push the release commit, wait for Github actions to finish, then push the release tag.
+Github workflows then take care of building release artifacts and publishing the release.
+
+## [Unreleased]
+
+## [0.2.0] – 2025-03-25
+
+Preliminary release of command line utility and crate.
+
+[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/swsnr/wol.rs/releases/tag/v0.2.0
