@@ -12,6 +12,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Added
+- Publish to crates.io
+
 ## [0.2.0] – 2025-03-25
 
 Preliminary release of command line utility and crate.

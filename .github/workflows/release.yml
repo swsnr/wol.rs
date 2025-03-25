@@ -6,6 +6,15 @@ on:
       - v*
 
 jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: '${{ secrets.CARGO_REGISTRY_TOKEN }}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --no-verify
+
   vendor-dependencies:
     permissions:
       id-token: write
