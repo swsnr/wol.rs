@@ -31,16 +31,14 @@
 )]
 #![forbid(unsafe_code)]
 
-use std::{
-    fmt::Display,
-    io::ErrorKind,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
-    path::PathBuf,
-    process::ExitCode,
-    str::FromStr,
-    thread::sleep,
-    time::Duration,
-};
+use std::fmt::Display;
+use std::io::ErrorKind;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::str::FromStr;
+use std::thread::sleep;
+use std::time::Duration;
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
 use wol::MacAddr6;
@@ -49,6 +47,7 @@ use wol::MacAddr6;
 struct ResolvedWakeUpTarget {
     hardware_address: MacAddr6,
     socket_addr: SocketAddr,
+    secure_on: Option<SecureOn>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,6 +67,7 @@ struct WakeUpTarget {
     hardware_address: MacAddr6,
     host: Host,
     port: u16,
+    secure_on: Option<SecureOn>,
 }
 
 impl WakeUpTarget {
@@ -83,6 +83,7 @@ impl WakeUpTarget {
                     Ok(ResolvedWakeUpTarget {
                         hardware_address: self.hardware_address,
                         socket_addr,
+                        secure_on: self.secure_on,
                     })
                 } else {
                     Err(std::io::Error::new(
@@ -94,6 +95,7 @@ impl WakeUpTarget {
             Host::Ip(ip_addr) => Ok(ResolvedWakeUpTarget {
                 hardware_address: self.hardware_address,
                 socket_addr: SocketAddr::new(*ip_addr, self.port),
+                secure_on: self.secure_on,
             }),
         }
     }
@@ -124,7 +126,26 @@ impl From<String> for Host {
     }
 }
 
-/// Wake up remote hosts with Wake On LAN magic packets.
+#[derive(Debug, Copy, Clone)]
+struct SecureOn([u8; 6]);
+
+impl From<SecureOn> for [u8; 6] {
+    fn from(value: SecureOn) -> Self {
+        value.0
+    }
+}
+
+impl FromStr for SecureOn {
+    type Err = macaddr::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // We conveniently reuse the MAC address parser, because the SecureON
+        // sequence is just the same length as a MAC address.  Since we now that
+        // there are six bytes inside the MacAdd6 we can safely unwrap here.
+        MacAddr6::from_str(s).map(MacAddr6::into_array).map(Self)
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(
     version,
@@ -208,10 +229,10 @@ struct CliArgs {
     wait: Option<Duration>,
     /// Include the given SecureON password in the magic packet.
     ///
-    /// If the password is omitted, prompt for the password.
+    /// The password is in the same format as a MAC address, i.e.
+    /// XX-XX-XX-XX-XX-XX or XX:XX:XX:XX:XX:XX.
     #[arg(long = "passwd", verbatim_doc_comment)]
-    #[allow(clippy::option_option)]
-    passwd: Option<Option<String>>,
+    passwd: Option<SecureOn>,
     /// Hardware addresses to wake up.
     #[arg(
         value_name = "MAC-ADDRESS",
@@ -225,10 +246,11 @@ impl CliArgs {
     fn targets(&self) -> impl Iterator<Item = WakeUpTarget> {
         self.hardware_addresses
             .iter()
-            .map(|hardware_address| WakeUpTarget {
+            .map(move |hardware_address| WakeUpTarget {
                 hardware_address: *hardware_address,
                 host: self.host.clone(),
                 port: self.port,
+                secure_on: self.passwd,
             })
     }
 
@@ -251,17 +273,16 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
         println!("Waking up {}...", target.hardware_address);
     }
     let target = target.resolve(mode)?;
-    wol::send_magic_packet(target.hardware_address, None, target.socket_addr)
+    wol::send_magic_packet(
+        target.hardware_address,
+        target.secure_on.map(Into::into),
+        target.socket_addr,
+    )
 }
 
 fn main() -> ExitCode {
     let args = CliArgs::parse();
     let resolve_mode = args.resolve_mode();
-
-    #[allow(clippy::todo)]
-    if args.passwd.is_some() {
-        todo!("SecureON");
-    }
 
     #[allow(clippy::todo)]
     if args.file.is_some() {
