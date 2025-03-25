@@ -34,7 +34,7 @@
 use std::{
     fmt::Display,
     io::ErrorKind,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
     path::PathBuf,
     process::ExitCode,
     str::FromStr,
@@ -43,7 +43,7 @@ use std::{
 };
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
-use wol::{MacAddr6, SendMagicPacket};
+use wol::MacAddr6;
 
 #[derive(Debug)]
 struct ResolvedWakeUpTarget {
@@ -211,13 +211,7 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
         println!("Waking up {}...", target.hardware_address);
     }
     let target = target.resolve(mode)?;
-    let bind_address = if target.socket_addr.is_ipv6() {
-        IpAddr::from(Ipv6Addr::UNSPECIFIED)
-    } else {
-        IpAddr::from(Ipv4Addr::UNSPECIFIED)
-    };
-    let socket = UdpSocket::bind((bind_address, 0))?;
-    socket.send_magic_packet(target.hardware_address, None, target.socket_addr)
+    wol::send_magic_packet(target.hardware_address, None, target.socket_addr)
 }
 
 fn main() -> ExitCode {
