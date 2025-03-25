@@ -4,7 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![deny(warnings, clippy::all, clippy::pedantic,
+#![deny(warnings,
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    clippy::all,
+    clippy::pedantic,
     // Do cfg(test) right
     clippy::cfg_not_test,
     clippy::tests_outside_test_module,
@@ -93,6 +98,7 @@ pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
     }
 }
 
+/// Fill the given `buffer` with the magic packet for the given `mac_address` and `secure_on` sequence.
 #[allow(clippy::missing_panics_doc)]
 pub fn fill_magic_packet_secure_on(
     buffer: &mut [u8; 108],
@@ -127,6 +133,7 @@ pub fn write_magic_packet<W: Write>(
     Ok(())
 }
 
+/// A socket which supports sending a magic packet.
 pub trait SendMagicPacket {
     /// Send a magic packet for `mac_address` to `addr` over this socket.
     ///
