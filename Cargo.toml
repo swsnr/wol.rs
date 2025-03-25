@@ -20,7 +20,14 @@ required-features = ["cli"]
 [dependencies]
 macaddr = "1.0.1"
 # Optional dependencies for CLI
-clap = { version = "4.5.32", features = ["derive"], optional = true }
+clap = { version = "4.5.32", default-features = false, features = [
+    "std",
+    "help",
+    "usage",
+    "error-context",
+    "suggestions",
+    "derive",
+], optional = true }
 
 [package.metadata.release]
 pre-release-commit-message = "Release {{version}}"
