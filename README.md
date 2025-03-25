@@ -5,6 +5,9 @@
 
 Wake On LAN magic packet command line tool and crate.
 
+[crates]: https://crates.io/crates/wol
+[docs]: https://docs.rs/wol
+
 ## Command line
 
 ```console
