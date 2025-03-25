@@ -125,59 +125,90 @@ impl From<String> for Host {
 }
 
 #[derive(Parser, Debug)]
-#[command(version, about, disable_help_flag = true)]
+#[command(version, about, disable_help_flag = true, verbatim_doc_comment)]
 struct CliArgs {
     /// Show this help message.
-    #[arg(short = '?', long = "help", action = ArgAction::Help)]
+    #[arg(short = '?', long = "help", action = ArgAction::Help, verbatim_doc_comment)]
     help: (),
-    /// Send the magic packet to this IP address or hostname.
+    /// Send the magic packet to HOST.
     ///
-    /// Defaults to the IPv4 broadcast address `255.255.255.255` or the IPv6
-    /// `ff02::1`.
+    /// HOST may either be a DNS name, or an IPv4/IPv6 address.
+    /// HOST may and most likely will be different from the
+    /// target system to wake up: Instead the magic packet needs
+    /// to be sent so that it physically passes the system to
+    /// wake up.  As such, you will most likely want to use a
+    /// broadcast or multicast address here.
+    ///
+    /// Defaults to the IPv4 broadcast address 255.255.255.255
+    /// or the IPv6 `ff02::1`, if --ipv6 is given.
     #[arg(
         short = 'h',
         long = "host",
         visible_short_alias = 'i',
         visible_alias = "ipaddr",
         default_value = "255.255.255.255",
-        default_value_if("ipv6", ArgPredicate::IsPresent, Some("ff02::1"))
+        default_value_if("ipv6", ArgPredicate::IsPresent, Some("ff02::1")),
+        verbatim_doc_comment
     )]
     host: Host,
     /// Prefer IPv6 addresses over IPv4 for DNS resolution.
     ///
-    /// This only affects DNS resolution for hostnames given to --host; literal
-    /// IPv4 and IPv6 addresses will always use the respective protocol.
+    /// This only affects DNS resolution for hostnames
+    /// given to --host; literal IPv4 and IPv6 addresses will
+    /// always use the respective protocol.
     ///
-    /// If omitted use the first resolved address returned by the operating system,
-    /// regardless of whether it is an IPv4 or IPv6 address.
-    #[arg(short = '6', long = "ipv6")]
+    /// If omitted use the first resolved address returned
+    /// by the operating system, regardless of whether it is
+    /// an IPv4 or IPv6 address.
+    #[arg(short = '6', long = "ipv6", verbatim_doc_comment)]
     ipv6: bool,
-    /// Send the magic packet to this port instead of the default.
-    #[arg(short = 'p', long = "port", default_value = "40000")]
+    /// Send the magic packet to PORT.
+    #[arg(
+        short = 'p',
+        long = "port",
+        default_value = "40000",
+        verbatim_doc_comment
+    )]
     port: u16,
-    /// Read lines of hardware addresses, and (optionally) IP addresses/hostnames, ports, and SecureON passwords from
-    /// the given file, or stdin, if `-` was given.
-    #[arg(short = 'f', long = "file", value_hint = ValueHint::FilePath)]
+    /// Read systems to wake up from FILE.
+    ///
+    /// Read lines of hardware address, and (optionally) IP
+    /// addresses/hostnames, ports, and SecureON passwords from
+    /// FILE, or stdin, if FILE is -.
+    ///
+    /// Fields in each line are separated by one or more spaces
+    /// or tabs; for each missing field the value of the
+    /// corresponding option or the global default will be used.
+    #[arg(short = 'f', long = "file", value_hint = ValueHint::FilePath, verbatim_doc_comment)]
     file: Option<PathBuf>,
     /// Verbose output.
-    #[arg(short = 'v', long = "verbose")]
+    #[arg(short = 'v', long = "verbose", verbatim_doc_comment)]
     verbose: bool,
-    /// Wait for given number of milliseconds after each magic packet.
+    /// Wait after each magic packet.
+    ///
+    /// After each magic packet wait for the given number of
+    /// milliseconds; use this to avoid waking up too many
+    /// systems too fast.
     #[arg(
         short = 'w',
         long = "wait",
         value_name = "MSECS",
-        value_parser = |v: &str| u64::from_str(v).map(Duration::from_millis)
+        value_parser = |v: &str| u64::from_str(v).map(Duration::from_millis),
+        verbatim_doc_comment
     )]
     wait: Option<Duration>,
     /// Include the given SecureON password in the magic packet.
     ///
     /// If the password is omitted, prompt for the password.
-    #[arg(long = "passwd")]
+    #[arg(long = "passwd", verbatim_doc_comment)]
     #[allow(clippy::option_option)]
     passwd: Option<Option<String>>,
     /// Hardware addresses to wake up.
-    #[arg(value_name = "MAC-ADDRESS", required_unless_present("file"))]
+    #[arg(
+        value_name = "MAC-ADDRESS",
+        required_unless_present("file"),
+        verbatim_doc_comment
+    )]
     hardware_addresses: Vec<wol::MacAddr6>,
 }
 
