@@ -124,8 +124,17 @@ impl From<String> for Host {
     }
 }
 
+/// Wake up remote hosts with Wake On LAN magic packets.
 #[derive(Parser, Debug)]
-#[command(version, about, disable_help_flag = true, verbatim_doc_comment)]
+#[command(
+    version,
+    about,
+    disable_help_flag = true,
+    verbatim_doc_comment,
+    after_help = "This program is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/."
+)]
 struct CliArgs {
     /// Show this help message.
     #[arg(short = '?', long = "help", action = ArgAction::Help, verbatim_doc_comment)]
