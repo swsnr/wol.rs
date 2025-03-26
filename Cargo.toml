@@ -9,6 +9,7 @@ keywords = ["WakeOnLan", "magic-packet", "WOL", "SecureON"]
 categories = ["command-line-utilities", "network-programming"]
 authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2024"
+rust-version = "1.85"
 
 [features]
 # Build the CLI tool
