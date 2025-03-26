@@ -80,4 +80,4 @@ jobs:
             target/
           key: ${{ runner.os }}-rust-${{ steps.toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo build --all-features
-      - run: cargo check --all-features
+      - run: cargo test --all-features
