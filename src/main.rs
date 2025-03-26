@@ -156,13 +156,13 @@ You can obtain one at http://mozilla.org/MPL/2.0/.";
     version,
     about,
     disable_help_flag = true,
-    verbatim_doc_comment,
+
     after_help = AFTER_HELP
 )]
 #[group()]
 struct CliArgs {
     /// Show this help message.
-    #[arg(short = '?', long = "help", action = ArgAction::Help, verbatim_doc_comment)]
+    #[arg(short = '?', long = "help", action = ArgAction::Help)]
     help: (),
     /// Send the magic packet to HOST.
     ///
@@ -194,7 +194,7 @@ struct CliArgs {
     /// If omitted use the first resolved address returned
     /// by the operating system, regardless of whether it is
     /// an IPv4 or IPv6 address.
-    #[arg(short = '6', long = "ipv6", verbatim_doc_comment)]
+    #[arg(short = '6', long = "ipv6")]
     ipv6: bool,
     /// Send the magic packet to PORT.
     #[arg(
@@ -213,10 +213,10 @@ struct CliArgs {
     /// Fields in each line are separated by one or more spaces
     /// or tabs; for each missing field the value of the
     /// corresponding option or the global default will be used.
-    #[arg(short = 'f', long = "file", value_hint = ValueHint::FilePath, verbatim_doc_comment)]
+    #[arg(short = 'f', long = "file", value_hint = ValueHint::FilePath)]
     file: Option<PathBuf>,
     /// Verbose output.
-    #[arg(short = 'v', long = "verbose", verbatim_doc_comment)]
+    #[arg(short = 'v', long = "verbose")]
     verbose: bool,
     /// Wait after each magic packet.
     ///
@@ -272,13 +272,13 @@ impl CliArgs {
     version,
     about,
     disable_help_flag = true,
-    verbatim_doc_comment,
+
     after_help = AFTER_HELP
 )]
 struct Cli {
     #[clap(flatten)]
     args: CliArgs,
-    #[arg(long = "print-manpage", verbatim_doc_comment, exclusive = true)]
+    #[arg(long = "print-manpage", exclusive = true)]
     /// Print manpage and exit.
     manpage: bool,
 }
