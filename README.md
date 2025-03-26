@@ -18,6 +18,7 @@ Waking up 12:13:14:15:16:17 with 255.255.255.255:42...
 See `wol --help` for more information.
 
 Install with `cargo install --features cli wol`; I also provide a binary package for Archlinux at <https://build.opensuse.org/package/show/home:swsnr/wol-rs>.
+For 3rd party packages, see [Repology](https://repology.org/project/wol-rs/versions).
 
 ## Crate
 
