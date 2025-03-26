@@ -79,5 +79,5 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-rust-${{ steps.toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: cargo build --all-features
-      - uses: cargo check --all-features
+      - run: cargo build --all-features
+      - run: cargo check --all-features
