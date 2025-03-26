@@ -40,6 +40,7 @@ use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
 
+use clap::CommandFactory;
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
 use wol::MacAddr6;
 
@@ -281,6 +282,9 @@ struct Cli {
     #[arg(long = "print-manpage", exclusive = true)]
     /// Print manpage and exit.
     manpage: bool,
+    /// Print completions for SHELL and exit
+    #[arg(long = "print-completions", exclusive = true)]
+    completions: Option<clap_complete::Shell>,
 }
 
 fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::Result<()> {
@@ -312,6 +316,16 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
         return ExitCode::SUCCESS;
+    }
+
+    #[cfg(feature = "completions")]
+    if let Some(shell) = cli.completions {
+        clap_complete::generate(
+            shell,
+            &mut CliArgs::command(),
+            "wol",
+            &mut std::io::stdout(),
+        );
     }
 
     let args = cli.args;

@@ -11,8 +11,12 @@ authors = ["Sebastian Wiesner <sebastian@swsnr.de>"]
 edition = "2024"
 
 [features]
+# Build the CLI tool
 cli = ["dep:clap"]
-manpage = ["cli", "dep:clap_mangen"]
+# Include the manpage in the CLI tool, behind a --print-manpage flag
+manpage = ["dep:clap_mangen"]
+# Include shell completions in the CLI tool, behind a --print-completions flag
+completions = ["dep:clap_complete"]
 
 [[bin]]
 name = "wol"
@@ -31,6 +35,7 @@ clap = { version = "4.5.32", default-features = false, features = [
     "wrap_help",
 ], optional = true }
 clap_mangen = { version = "0.2.26", optional = true }
+clap_complete = { version = "4.5.47", optional = true }
 
 [package.metadata.release]
 pre-release-commit-message = "Release {{version}}"
