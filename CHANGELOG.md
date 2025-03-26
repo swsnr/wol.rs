@@ -14,6 +14,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [0.2.2] – 2025-03-26
 
+### Added
+- Add manpage and shell completions
+
 ## [0.2.1] – 2025-03-25
 
 ### Added
