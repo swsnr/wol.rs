@@ -40,7 +40,6 @@ use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
 
-use clap::CommandFactory;
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
 use wol::MacAddr6;
 
@@ -279,10 +278,12 @@ impl CliArgs {
 struct Cli {
     #[clap(flatten)]
     args: CliArgs,
-    #[arg(long = "print-manpage", exclusive = true)]
     /// Print manpage and exit.
+    #[cfg(feature = "manpage")]
+    #[arg(long = "print-manpage", exclusive = true)]
     manpage: bool,
     /// Print completions for SHELL and exit
+    #[cfg(feature = "completions")]
     #[arg(long = "print-completions", exclusive = true)]
     completions: Option<clap_complete::Shell>,
 }
@@ -320,6 +321,7 @@ fn main() -> ExitCode {
 
     #[cfg(feature = "completions")]
     if let Some(shell) = cli.completions {
+        use clap::CommandFactory;
         clap_complete::generate(
             shell,
             &mut CliArgs::command(),
