@@ -20,6 +20,5 @@ url = "https://raw.githubusercontent.com/swsnr/rust-supply-chain/refs/heads/main
 audit-as-crates-io = false
 
 [[exemptions.terminal_size]]
-# Unix/linux code looks safe, but I don't feel like checking the unsafe Windows code
 version = "0.4.2"
 criteria = "safe-to-deploy"
