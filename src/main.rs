@@ -146,16 +146,20 @@ impl FromStr for SecureOn {
     }
 }
 
-#[derive(Parser, Debug)]
+const AFTER_HELP: &str =
+    "This program is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.";
+
+#[derive(Parser, Debug, Clone)]
 #[command(
     version,
     about,
     disable_help_flag = true,
     verbatim_doc_comment,
-    after_help = "This program is subject to the terms of the Mozilla Public License, v. 2.0.
-If a copy of the MPL was not distributed with this file,
-You can obtain one at http://mozilla.org/MPL/2.0/."
+    after_help = AFTER_HELP
 )]
+#[group()]
 struct CliArgs {
     /// Show this help message.
     #[arg(short = '?', long = "help", action = ArgAction::Help, verbatim_doc_comment)]
@@ -231,7 +235,7 @@ struct CliArgs {
     ///
     /// The password is in the same format as a MAC address, i.e.
     /// XX-XX-XX-XX-XX-XX or XX:XX:XX:XX:XX:XX.
-    #[arg(long = "passwd", verbatim_doc_comment)]
+    #[arg(long = "passwd")]
     passwd: Option<SecureOn>,
     /// Hardware addresses to wake up.
     #[arg(
@@ -263,6 +267,22 @@ impl CliArgs {
     }
 }
 
+#[derive(Debug, Parser)]
+#[command(
+    version,
+    about,
+    disable_help_flag = true,
+    verbatim_doc_comment,
+    after_help = AFTER_HELP
+)]
+struct Cli {
+    #[clap(flatten)]
+    args: CliArgs,
+    #[arg(long = "print-manpage", verbatim_doc_comment, exclusive = true)]
+    /// Print manpage and exit.
+    manpage: bool,
+}
+
 fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::Result<()> {
     if verbose {
         println!(
@@ -281,14 +301,26 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
 }
 
 fn main() -> ExitCode {
-    let args = CliArgs::parse();
-    let resolve_mode = args.resolve_mode();
+    let cli = Cli::parse();
 
+    #[cfg(feature = "manpage")]
+    if cli.manpage {
+        use clap::CommandFactory;
+        let manpage = clap_mangen::Man::new(CliArgs::command());
+        if let Err(error) = manpage.render(&mut std::io::stdout()) {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+        return ExitCode::SUCCESS;
+    }
+
+    let args = cli.args;
     #[allow(clippy::todo)]
     if args.file.is_some() {
         todo!("Wakeup files");
     }
 
+    let resolve_mode = args.resolve_mode();
     let mut return_code = ExitCode::SUCCESS;
     for (i, target) in args.targets().enumerate() {
         if 0 < i {

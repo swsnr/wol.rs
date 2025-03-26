@@ -1,6 +1,12 @@
 
 # cargo-vet audits file
 
+[[audits.clap_mangen]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+version = "0.2.26"
+notes = "No unsafe code, and only standard file system access."
+
 [[audits.heck]]
 who = "Sebastian Wiesner <sebastian@swsnr.de>"
 criteria = "safe-to-deploy"
@@ -15,6 +21,12 @@ notes = """
 crate forbids unsafe code, and does not use ambient capabilities (no network, no filesystem access, etc.).
 Parsing code is well-tested, and fuzzed.
 """
+
+[[audits.roff]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+version = "0.2.2"
+notes = "No unsafe, no large ambient capabilities like file system access."
 
 [[trusted.anstream]]
 criteria = "safe-to-deploy"

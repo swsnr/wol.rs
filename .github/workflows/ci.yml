@@ -48,8 +48,12 @@ jobs:
             target/
           key: ${{ runner.os }}-rust-${{ steps.toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo fmt --check
+      # Just the library crate
       - run: cargo build
+      # Regular CLI build, for use e.g. in distribution packages
       - run: cargo build --features cli
+      # Test all features build for manpage, etc.
+      - run: cargo build --all-features
       - run: cargo clippy --all-targets --all-features
       - run: cargo test --all-features
       - run: cargo doc
