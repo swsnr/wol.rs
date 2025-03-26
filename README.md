@@ -17,12 +17,20 @@ Waking up 12:13:14:15:16:17 with 255.255.255.255:42...
 
 See `wol --help` for more information.
 
-Install with `cargo install --features cli wol`; I also provide a binary package for Archlinux at <https://build.opensuse.org/package/show/home:swsnr/wol-rs>.
-For 3rd party packages, see [Repology](https://repology.org/project/wol-rs/versions).
+## Installation
+
+- [Arch binary package](https://build.opensuse.org/package/show/home:swsnr/wol-rs)
+- `cargo install --all-features wol`
+- 3rd party packages: [Repology](https://repology.org/project/wol-rs/versions)
+
+For packaging, all releases have reproducible git archive and cargo vendor bundles attached, built and attested by a Github workflow.
+You can use `gh attestation verify` to check these attestations.
+I recommend to first build with `--all-features`, then dump the manpage and desired completions with `--print-manpage` and `--print-completions`, and eventually build with `--features cli` to remove these options from the final binary.
+See arch package above for an example.
 
 ## Crate
 
-You can also use `wol` as a Rust crate:
+You can also use `wol` as a Rust crate, with `cargo add wol`:
 
 ```rust
 use std::str::FromStr;
