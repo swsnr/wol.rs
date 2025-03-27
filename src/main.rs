@@ -31,9 +31,9 @@
 )]
 #![forbid(unsafe_code)]
 
-use std::fmt::Display;
-use std::io::ErrorKind;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
+use std::fs::File;
+use std::io::{BufReader, Error, ErrorKind, Result, stdin};
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::str::FromStr;
@@ -41,6 +41,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
+use wol::file::MagicPacketDestination;
 use wol::{MacAddr6, SecureOn};
 
 #[derive(Debug)]
@@ -65,15 +66,15 @@ impl Default for ResolveMode {
 #[derive(Debug)]
 struct WakeUpTarget {
     hardware_address: MacAddr6,
-    host: Host,
+    host: MagicPacketDestination,
     port: u16,
     secure_on: Option<SecureOn>,
 }
 
 impl WakeUpTarget {
-    fn resolve(&self, mode: ResolveMode) -> std::io::Result<ResolvedWakeUpTarget> {
+    fn resolve(&self, mode: ResolveMode) -> Result<ResolvedWakeUpTarget> {
         match &self.host {
-            Host::Dns(dns) => {
+            MagicPacketDestination::Dns(dns) => {
                 let mut socket_addrs = (dns.as_str(), self.port).to_socket_addrs()?;
                 let socket_addr = match mode {
                     ResolveMode::Default => socket_addrs.next(),
@@ -86,13 +87,13 @@ impl WakeUpTarget {
                         secure_on: self.secure_on,
                     })
                 } else {
-                    Err(std::io::Error::new(
+                    Err(Error::new(
                         ErrorKind::HostUnreachable,
                         format!("Host {dns} not reachable"),
                     ))
                 }
             }
-            Host::Ip(ip_addr) => Ok(ResolvedWakeUpTarget {
+            MagicPacketDestination::Ip(ip_addr) => Ok(ResolvedWakeUpTarget {
                 hardware_address: self.hardware_address,
                 socket_addr: SocketAddr::new(*ip_addr, self.port),
                 secure_on: self.secure_on,
@@ -102,27 +103,18 @@ impl WakeUpTarget {
 }
 
 #[derive(Debug, Clone)]
-enum Host {
-    Dns(String),
-    Ip(IpAddr),
+enum PathOrStdin {
+    Stdin,
+    Path(PathBuf),
 }
 
-impl Display for Host {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Host::Dns(dns) => write!(f, "{dns}"),
-            Host::Ip(ip_addr) => write!(f, "{ip_addr}"),
-        }
-    }
-}
-
-impl From<String> for Host {
+impl From<String> for PathOrStdin {
     fn from(value: String) -> Self {
-        Ipv4Addr::from_str(&value)
-            .map(IpAddr::from)
-            .ok()
-            .or_else(|| Ipv6Addr::from_str(&value).ok().map(IpAddr::from))
-            .map_or_else(|| Self::Dns(value), Self::Ip)
+        if value == "-" {
+            Self::Stdin
+        } else {
+            Self::Path(value.into())
+        }
     }
 }
 
@@ -166,7 +158,7 @@ struct CliArgs {
         default_value_if("ipv6", ArgPredicate::IsPresent, Some("ff02::1")),
         verbatim_doc_comment
     )]
-    host: Host,
+    host: MagicPacketDestination,
     /// Prefer IPv6 addresses over IPv4 for DNS resolution.
     ///
     /// This only affects DNS resolution for hostnames
@@ -196,7 +188,7 @@ struct CliArgs {
     /// or tabs; for each missing field the value of the
     /// corresponding option or the global default will be used.
     #[arg(short = 'f', long = "file", value_hint = ValueHint::FilePath)]
-    file: Option<PathBuf>,
+    file: Option<PathOrStdin>,
     /// Verbose output.
     #[arg(short = 'v', long = "verbose")]
     verbose: bool,
@@ -229,8 +221,32 @@ struct CliArgs {
 }
 
 impl CliArgs {
-    fn targets(&self) -> impl Iterator<Item = WakeUpTarget> {
-        self.hardware_addresses
+    fn iter_file(&self) -> Result<Box<dyn Iterator<Item = Result<wol::file::WakeUpTarget>>>> {
+        match &self.file {
+            Some(PathOrStdin::Stdin) => {
+                Ok(Box::new(wol::file::from_reader(BufReader::new(stdin()))))
+            }
+            Some(PathOrStdin::Path(path)) => Ok(Box::new(wol::file::from_reader(BufReader::new(
+                File::open(path)?,
+            )))),
+            None => Ok(Box::new(std::iter::empty())),
+        }
+    }
+
+    fn targets(&self) -> Result<impl Iterator<Item = Result<WakeUpTarget>>> {
+        let file_targets = self.iter_file()?.map(|target| {
+            target.map(|target| WakeUpTarget {
+                hardware_address: target.hardware_address(),
+                host: target
+                    .packet_destination()
+                    .cloned()
+                    .unwrap_or(self.host.clone()),
+                port: target.port().unwrap_or(self.port),
+                secure_on: target.secure_on().or(self.passwd),
+            })
+        });
+        let cli_targets = self
+            .hardware_addresses
             .iter()
             .map(move |hardware_address| WakeUpTarget {
                 hardware_address: *hardware_address,
@@ -238,6 +254,8 @@ impl CliArgs {
                 port: self.port,
                 secure_on: self.passwd,
             })
+            .map(Ok);
+        Ok(file_targets.chain(cli_targets))
     }
 
     fn resolve_mode(&self) -> ResolveMode {
@@ -270,7 +288,7 @@ struct Cli {
     completions: Option<clap_complete::Shell>,
 }
 
-fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::Result<()> {
+fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> Result<()> {
     if verbose {
         println!(
             "Waking up {} with {}:{}...",
@@ -287,18 +305,12 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
     )
 }
 
-fn main() -> ExitCode {
-    let cli = Cli::parse();
-
+fn process_cli(cli: Cli) -> Result<ExitCode> {
     #[cfg(feature = "manpage")]
     if cli.manpage {
         use clap::CommandFactory;
-        let manpage = clap_mangen::Man::new(CliArgs::command());
-        if let Err(error) = manpage.render(&mut std::io::stdout()) {
-            eprintln!("{error}");
-            return ExitCode::FAILURE;
-        }
-        return ExitCode::SUCCESS;
+        clap_mangen::Man::new(CliArgs::command()).render(&mut std::io::stdout())?;
+        return Ok(ExitCode::SUCCESS);
     }
 
     #[cfg(feature = "completions")]
@@ -310,26 +322,36 @@ fn main() -> ExitCode {
             "wol",
             &mut std::io::stdout(),
         );
+        return Ok(ExitCode::SUCCESS);
     }
 
     let args = cli.args;
-    #[allow(clippy::todo)]
-    if args.file.is_some() {
-        todo!("Wakeup files");
-    }
-
     let resolve_mode = args.resolve_mode();
-    let mut return_code = ExitCode::SUCCESS;
-    for (i, target) in args.targets().enumerate() {
+    let mut exit_code = ExitCode::SUCCESS;
+    for (i, target) in args.targets()?.enumerate() {
+        let target = target?;
         if 0 < i {
             if let Some(wait) = args.wait.filter(|d| !d.is_zero()) {
                 sleep(wait);
             }
         }
         if let Err(error) = wakeup(&target, resolve_mode, args.verbose) {
+            // Do not exit early; instead attempt to wake up all devices even if one fails.
             eprintln!("Failed to wake up {}: {error}", target.hardware_address);
-            return_code = ExitCode::FAILURE;
+            // But indicate failure in the exit code
+            exit_code = ExitCode::FAILURE;
         }
     }
-    return_code
+
+    Ok(exit_code)
+}
+
+fn main() -> ExitCode {
+    match process_cli(Cli::parse()) {
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
+        }
+        Ok(exit_code) => exit_code,
+    }
 }
