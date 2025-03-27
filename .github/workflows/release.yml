@@ -35,7 +35,7 @@ jobs:
       - run: env LC_ALL=C tar --numeric-owner --owner 0 --group 0 --sort name --mode='go+u,go-w' --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f --pax-option=delete=atime,delete=ctime --mtime="${{ steps.timestamp.outputs.timestamp }}" -c -f "wol-${{ github.ref_name }}-vendor.tar.zst" --zstd vendor
       - uses: actions/attest-build-provenance@v2
         with:
-          subject-path: vendor.tar.zst
+          subject-path: wol-${{ github.ref_name }}-vendor.tar.zst
       - uses: actions/upload-artifact@v4
         with:
           name: wol-${{ github.ref_name }}-vendor.tar.zst
