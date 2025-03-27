@@ -59,16 +59,62 @@ jobs:
           name: wol-${{ github.ref_name }}.tar.zst
           path: wol-${{ github.ref_name }}.tar.zst
 
+  windows-binary:
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --all-features --locked --release
+      - run: 7z a "wol-${{ github.ref_name }}-windows-x86_64.zip" target/release/wol.exe
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'wol-${{ github.ref_name }}-windows-x86_64.zip'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wol-${{ github.ref_name }}-windows-x86_64.zip
+          path: wol-${{ github.ref_name }}-windows-x86_64.zip
+
+  linux-binary:
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --all-features --locked --release
+      - run: mkdir wol-${{ github.ref_name }}-linux-x86_64
+      - run: mv target/release/wol wol-${{ github.ref_name }}-linux-x86_64
+      - run: env LC_ALL=C tar --numeric-owner --owner 0 --group 0 --sort name --mode='go+u,go-w' --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f --pax-option=delete=atime,delete=ctime -c -f "wol-${{ github.ref_name }}-linux-x86_64.tar.zstd" --zstd wol-${{ github.ref_name }}-linux-x86_64
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'wol-${{ github.ref_name }}-linux-x86_64.tar.zst'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wol-${{ github.ref_name }}-linux-x86_64.tar.zst
+          path: wol-${{ github.ref_name }}-linux-x86_64.tar.zst
+
   create-release:
     runs-on: ubuntu-latest
-    needs: [vendor-dependencies]
+    needs:
+      - git-archive
+      - vendor-dependencies
+      - windows-binary
+      - linux-binary
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: ./binaries
+          path: ./artifacts
+          merge-multiple: false
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./binaries/**/*.tar.*
+            ./*.tar.zst
+            ./*.zip
