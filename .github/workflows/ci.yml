@@ -38,13 +38,13 @@ jobs:
           components: rustfmt, clippy
       - run: cargo fmt --check
       # Just the library crate
-      - run: cargo build
+      - run: cargo build --locked
       # Regular CLI build, for use e.g. in distribution packages
-      - run: cargo build --features cli
+      - run: cargo build --locked --features cli
       # Test all features build for manpage, etc.
-      - run: cargo build --all-features
-      - run: cargo clippy --all-targets --all-features
-      - run: cargo test --all-features
+      - run: cargo build --locked --all-features
+      - run: cargo clippy --locked --all-targets --all-features
+      - run: cargo test --locked --all-features
       - run: cargo doc
       - name: cargo deny check
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -57,5 +57,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --all-features
-      - run: cargo test --all-features
+      - run: cargo build --locked --all-features
+      - run: cargo test --locked --all-features
