@@ -90,7 +90,7 @@ jobs:
       - run: cargo build --all-features --locked --release
       - run: mkdir wol-${{ github.ref_name }}-linux-x86_64
       - run: mv -t wol-${{ github.ref_name }}-linux-x86_64 target/release/wol
-      - run: env LC_ALL=C tar --numeric-owner --owner 0 --group 0 --sort name --mode='go+u,go-w' --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f --pax-option=delete=atime,delete=ctime -c -f "wol-${{ github.ref_name }}-linux-x86_64.tar.zstd" --zstd wol-${{ github.ref_name }}-linux-x86_64
+      - run: env LC_ALL=C tar --numeric-owner --owner 0 --group 0 --sort name --mode='go+u,go-w' --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f --pax-option=delete=atime,delete=ctime -c -f "wol-${{ github.ref_name }}-linux-x86_64.tar.zst" --zstd wol-${{ github.ref_name }}-linux-x86_64
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'wol-${{ github.ref_name }}-linux-x86_64.tar.zst'
