@@ -12,6 +12,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Changed
+- Use a dedicated `SecureOn` type for SecureOn tokens.
+
 ## [0.2.3] – 2025-03-27
 
 ### Added

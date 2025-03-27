@@ -72,20 +72,58 @@
 //!
 //! ## SecureON
 //!
-//! This crate supports SecureON magic packets.  If a SecureON sequence is set
-//! in the firmware of the target device, the device will only wake up if the
-//! magic packet additionally includes the given SecureON sequence. This offers
-//! a marginal amount of protection against unauthorized wake-ups in case the
-//! MAC address of the target device is known.  Note however that this SecureON
-//! byte sequence is included in the magic packet as plain text, so it should
-//! not be assumed a secret.
+//! This crate supports SecureON magic packets.
 
 use std::io::Write;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
+use std::str::FromStr;
 
 /// MAC address types.
 pub use macaddr;
 pub use macaddr::MacAddr6;
+
+/// A SecureON token.
+///
+/// A SecureON token consists of six bytes, similar to a MAC address.
+///
+/// If such a SecureON token is set in the firmware of the target device, the
+/// device will only wake up if the magic packet additionally includes the given
+/// SecureON token.
+///
+/// This offers a marginal amount of protection against unauthorized wake-ups in
+/// case the MAC address of the target device is known. Note however that this
+/// SecureON token is included in the magic packet as plain text, so it should
+/// **not be assumed a secret**.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SecureOn([u8; 6]);
+
+impl AsRef<[u8]> for SecureOn {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<SecureOn> for [u8; 6] {
+    fn from(value: SecureOn) -> Self {
+        value.0
+    }
+}
+
+impl From<[u8; 6]> for SecureOn {
+    fn from(value: [u8; 6]) -> Self {
+        Self(value)
+    }
+}
+
+impl FromStr for SecureOn {
+    type Err = macaddr::ParseError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        // We conveniently reuse the MAC address parser, because the SecureON
+        // token is just the same length as a MAC address.
+        MacAddr6::from_str(s).map(MacAddr6::into_array).map(Self)
+    }
+}
 
 /// Fill the given `buffer` with the magic packet for the given `mac_address`.
 pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
@@ -98,22 +136,22 @@ pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
     }
 }
 
-/// Fill the given `buffer` with the magic packet for the given `mac_address` and `secure_on` sequence.
+/// Fill the given `buffer` with the magic packet for the given `mac_address` and `secure_on` token.
 #[allow(clippy::missing_panics_doc)]
 pub fn fill_magic_packet_secure_on(
     buffer: &mut [u8; 108],
     mac_address: MacAddr6,
-    secure_on: [u8; 6],
+    secure_on: SecureOn,
 ) {
     // We know that `buffer` is >= 102 characters so this will never panic.
     fill_magic_packet((&mut buffer[..102]).try_into().unwrap(), mac_address);
-    buffer[102..].copy_from_slice(&secure_on);
+    buffer[102..].copy_from_slice(secure_on.as_ref());
 }
 
 /// Write a magic packet for the given `mac_address` to `sink`.
 ///
 /// If `secure_on` is not `None`, include it at the end of the magic packet;
-/// see module documentatn for more information about SecureON.
+/// see [`SecureOn`] for more information about SecureON.
 ///
 /// # Errors
 ///
@@ -121,14 +159,14 @@ pub fn fill_magic_packet_secure_on(
 pub fn write_magic_packet<W: Write>(
     sink: &mut W,
     mac_address: MacAddr6,
-    secure_on: Option<[u8; 6]>,
+    secure_on: Option<SecureOn>,
 ) -> std::io::Result<()> {
     sink.write_all(&[0xff; 6])?;
     for _ in 0..16 {
         sink.write_all(mac_address.as_bytes())?;
     }
     if let Some(secure_on) = secure_on {
-        sink.write_all(&secure_on)?;
+        sink.write_all(secure_on.as_ref())?;
     }
     Ok(())
 }
@@ -140,9 +178,9 @@ pub trait SendMagicPacket {
     /// # SecureON
     ///
     /// In addition to the `mac_address`, you can optionally include a shared
-    /// "SecureON" byte sequence in the magic packet.
+    /// "SecureON" token in the magic packet.
     ///
-    /// See module documentation for more information.
+    /// See [`SecureOn`] for more information.
     ///
     /// # Target address
     ///
@@ -163,7 +201,7 @@ pub trait SendMagicPacket {
     fn send_magic_packet<A: ToSocketAddrs>(
         &self,
         mac_address: MacAddr6,
-        secure_on: Option<[u8; 6]>,
+        secure_on: Option<SecureOn>,
         addr: A,
     ) -> std::io::Result<()>;
 }
@@ -172,7 +210,7 @@ impl SendMagicPacket for UdpSocket {
     fn send_magic_packet<A: ToSocketAddrs>(
         &self,
         mac_address: MacAddr6,
-        secure_on: Option<[u8; 6]>,
+        secure_on: Option<SecureOn>,
         addr: A,
     ) -> std::io::Result<()> {
         if let Some(secure_on) = secure_on {
@@ -206,7 +244,7 @@ impl SendMagicPacket for UdpSocket {
 /// Return errors from underlying socket I/O.
 pub fn send_magic_packet(
     mac_address: MacAddr6,
-    secure_on: Option<[u8; 6]>,
+    secure_on: Option<SecureOn>,
     addr: SocketAddr,
 ) -> std::io::Result<()> {
     let bind_address = if addr.is_ipv4() {
@@ -257,7 +295,7 @@ mod tests {
         let secure_on = [0x12, 0x13, 0x14, 0x15, 0x16, 0x42];
         let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
         let mut buffer = [0; 108];
-        fill_magic_packet_secure_on(&mut buffer, mac_address, secure_on);
+        fill_magic_packet_secure_on(&mut buffer, mac_address, secure_on.into());
         let expected_packet: [u8; 108] = [
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Six all 1 bytes
             0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33, // 16 repetitions of the mac address
@@ -313,7 +351,7 @@ mod tests {
         let secure_on = [0x12, 0x13, 0x14, 0x15, 0x16, 0x42];
         let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
         let mut buffer = Vec::new();
-        write_magic_packet(&mut buffer, mac_address, Some(secure_on)).unwrap();
+        write_magic_packet(&mut buffer, mac_address, Some(secure_on.into())).unwrap();
         let expected_packet: [u8; 108] = [
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Six all 1 bytes
             0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33, // 16 repetitions of the mac address

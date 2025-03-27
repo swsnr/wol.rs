@@ -41,7 +41,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
-use wol::MacAddr6;
+use wol::{MacAddr6, SecureOn};
 
 #[derive(Debug)]
 struct ResolvedWakeUpTarget {
@@ -123,26 +123,6 @@ impl From<String> for Host {
             .ok()
             .or_else(|| Ipv6Addr::from_str(&value).ok().map(IpAddr::from))
             .map_or_else(|| Self::Dns(value), Self::Ip)
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct SecureOn([u8; 6]);
-
-impl From<SecureOn> for [u8; 6] {
-    fn from(value: SecureOn) -> Self {
-        value.0
-    }
-}
-
-impl FromStr for SecureOn {
-    type Err = macaddr::ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // We conveniently reuse the MAC address parser, because the SecureON
-        // sequence is just the same length as a MAC address.  Since we now that
-        // there are six bytes inside the MacAdd6 we can safely unwrap here.
-        MacAddr6::from_str(s).map(MacAddr6::into_array).map(Self)
     }
 }
 
@@ -302,7 +282,7 @@ fn wakeup(target: &WakeUpTarget, mode: ResolveMode, verbose: bool) -> std::io::R
     let target = target.resolve(mode)?;
     wol::send_magic_packet(
         target.hardware_address,
-        target.secure_on.map(Into::into),
+        target.secure_on,
         target.socket_addr,
     )
 }
