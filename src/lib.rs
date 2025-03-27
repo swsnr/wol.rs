@@ -82,6 +82,8 @@ use std::str::FromStr;
 pub use macaddr;
 pub use macaddr::MacAddr6;
 
+pub mod file;
+
 /// A SecureON token.
 ///
 /// A SecureON token consists of six bytes, similar to a MAC address.
