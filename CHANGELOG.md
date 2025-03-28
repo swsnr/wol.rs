@@ -12,6 +12,13 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Added
+- Add `wol::file` module to read "wakeup files", i.e. files containing hosts to wake up.
+- Implement the `--file` option.
+
+### Changed
+- Use a dedicated `SecureOn` type for SecureOn tokens.
+
 ## [0.2.3] – 2025-03-27
 
 ### Added
