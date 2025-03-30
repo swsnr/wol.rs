@@ -10,9 +10,22 @@ Wake On LAN magic packet command line tool and crate.
 
 ## Command line
 
+Wake up a single host:
+
 ```console
 $ wol --verbose --port 42 12:13:14:15:16:17
 Waking up 12:13:14:15:16:17 with 255.255.255.255:42...
+```
+
+Wake up a list of hosts, including an optional SecureON token:
+
+```
+$ cat home-lab
+12:13:14:15:16:17 9
+12:23:24:25:26:27 9 cd-23-ae-9d-3f-c2
+$ wol --file=home-lab
+Waking up 12:13:14:15:16:17...
+Waking up 12:23:24:25:26:27...
 ```
 
 See `wol --help` for more information.
