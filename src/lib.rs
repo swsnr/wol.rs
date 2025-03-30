@@ -127,7 +127,9 @@ impl FromStr for SecureOn {
     }
 }
 
-/// Fill the given `buffer` with the magic packet for the given `mac_address`.
+/// Fill a buffer with a magic packet.
+///
+/// Fill `buffer` with a magic packet to wake up `mac_address`.
 pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
     buffer[0..6].copy_from_slice(&[0xff; 6]);
     for i in 0..16 {
@@ -138,7 +140,10 @@ pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
     }
 }
 
-/// Fill the given `buffer` with the magic packet for the given `mac_address` and `secure_on` token.
+/// Fill a buffer with a magic packet with a SecureON token.
+///
+/// Fill `buffer` with a magic packet to wake up `mac_address`, using the
+/// `secure_on` token.
 #[allow(clippy::missing_panics_doc)]
 pub fn fill_magic_packet_secure_on(
     buffer: &mut [u8; 108],
@@ -150,10 +155,12 @@ pub fn fill_magic_packet_secure_on(
     buffer[102..].copy_from_slice(secure_on.as_ref());
 }
 
-/// Write a magic packet for the given `mac_address` to `sink`.
+/// Write a magic packet to a buffer.
 ///
-/// If `secure_on` is not `None`, include it at the end of the magic packet;
-/// see [`SecureOn`] for more information about SecureON.
+/// Write a magic packet to `sink`, to wake up `mac_address`.  If `secure_on` is
+/// not `None`, include it at the end of the magic packet.
+///
+/// See [`SecureOn`] for more information about SecureON.
 ///
 /// # Errors
 ///
@@ -175,7 +182,11 @@ pub fn write_magic_packet<W: Write>(
 
 /// A socket which supports sending a magic packet.
 pub trait SendMagicPacket {
-    /// Send a magic packet for `mac_address` to `addr` over this socket.
+    /// Send a magic packet over this socket.
+    ///
+    /// Send a magic packet to wake up `mac_address` over this socket.  If
+    /// `secure_on` is not `None`, include the SecureON token in the packet.
+    /// Use `addr` as destination address for the packet.
     ///
     /// # SecureON
     ///
@@ -234,10 +245,15 @@ impl SendMagicPacket for UdpSocket {
     }
 }
 
-/// Send a magic packet for `mac_address` to `addr`.
+/// Send one magic packet.
 ///
-/// This convenience method binds an UDP socket, and sends a single magic packet
-/// for `mac_address` to `addr`.
+/// Bind a new UDP socket to send a magic packet.  If `addr` is an IPv4 address
+/// bind to [`Ipv4Addr::UNSPECIFIED`], otherwise bind [`Ipv6Addr::UNSPECIFIED`].
+/// Then send a magic packet to wake up `mac_address` over this socket, to the
+/// given destination `addr`.
+///
+/// If `secure_on` is not `None`, include the SecureON token in the magic
+/// packet. See [`SecureOn`] for more information about SecureON.
 ///
 /// See [`SendMagicPacket::send_magic_packet`] for details about the arguments.
 ///

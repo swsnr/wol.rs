@@ -61,8 +61,12 @@ impl From<String> for MagicPacketDestination {
 /// <hardware-address> [<IP/DNS name>] [<port>] [<secure-on>]
 /// ```
 ///
-/// Except for the hardware address all other fields are optional.  The SecureON
-/// token uses the same format as a MAC address.
+/// Except for the hardware address all other fields are optional.
+///
+/// The MAC address is given as six hexadecimal bytes separated by dashes or
+/// colons, e.g `XX-XX-XX-XX-XX-XX` or `XX:XX:XX:XX:XX:XX`.
+///
+/// The SecureON is given in the same format.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WakeUpTarget {
     hardware_address: MacAddr6,
@@ -273,12 +277,15 @@ impl FromStr for WakeUpTarget {
     }
 }
 
-/// An invalid [`WakeUpTarget`] in an iterator of lines.
+/// An invalid [`WakeUpTarget`] in an iterator over lines.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseLineError(usize, WakeUpTargetParseError);
 
 impl ParseLineError {
-    /// Create a new error for the given line number.
+    /// Create a new error.
+    ///
+    /// `line_no` denotes the 1-based number of the faulty line, and `error` is
+    /// the error which occurred while parsing that line.
     #[must_use]
     pub fn new(line_no: usize, error: WakeUpTargetParseError) -> Self {
         Self(line_no, error)
@@ -319,7 +326,12 @@ fn parse_line(i: usize, line: &str) -> Option<Result<WakeUpTarget, ParseLineErro
 
 /// Parse targets from an iterator over lines.
 ///
-/// Ignore empty lines, or lines starting with `#`, and try to parse all other lines as [`WakeUpTarget`]s.
+/// Ignore empty lines, or lines starting with `#`, and try to parse all other
+/// lines as [`WakeUpTarget`]s.
+///
+/// Return an iterator over results from parsing lines, after ignoring empty
+/// or comment lines.  Each item is either a parsed target, or an error which
+/// occurred while parsing a line.
 pub fn from_lines<I, S>(lines: I) -> impl Iterator<Item = Result<WakeUpTarget, ParseLineError>>
 where
     I: IntoIterator<Item = S>,
@@ -331,13 +343,16 @@ where
         .filter_map(|(i, line)| parse_line(i, line.as_ref()))
 }
 
-/// Parse targets from lines read from given `reader`.
+/// Parse targets from lines read from a reader.
 ///
-/// Ignore empty lines, or lines starting with `#`, and try to parse all other lines as [`WakeUpTarget`]s.
+/// See [`from_lines`] for more information.
 ///
-/// # Errors
+/// Return an iterator over results from parsing lines, after ignoring empty
+/// or comment lines.  Each item is either a parsed target, or an error which
+/// occurring while reading or parsing a line.
 ///
-/// Each item can fail, either if there was an I/O error, or if the target was invalid.
+/// If a line fails to parse the [`ParseLineError`] is wrapped in an
+/// [`std::io::Error`], with [`ErrorKind::InvalidData`].
 pub fn from_reader<R: BufRead>(reader: R) -> impl Iterator<Item = Result<WakeUpTarget, Error>> {
     reader.lines().enumerate().filter_map(|(i, line)| {
         line.and_then(|line| {
