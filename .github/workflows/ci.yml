@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo rust_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages | map(select(.name == "wol")) | first | .rust_version')"
+      - run: echo rust_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages | map(select(.name == "wol")) | first | .rust_version')" >> "${GITHUB_OUTPUT}"
         id: rust_version
       - uses: dtolnay/rust-toolchain@master
         with:
