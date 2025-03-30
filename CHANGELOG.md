@@ -12,6 +12,8 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+## [0.3.0] – 2025-03-30
+
 ### Added
 - Add `wol::file` module to read "wakeup files", i.e. files containing hosts to wake up.
 - Implement the `--file` option.
@@ -38,7 +40,8 @@ Github workflows then take care of building release artifacts and publishing the
 
 Preliminary release of command line utility and crate.
 
-[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/swsnr/wol.rs/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/swsnr/wol.rs/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/swsnr/wol.rs/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/swsnr/wol.rs/compare/v0.2.0...v0.2.1
