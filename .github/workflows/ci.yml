@@ -28,6 +28,19 @@ jobs:
       - run: cargo install --root ${{ runner.tool_cache }}/cargo-vet --version ${{ env.CARGO_VET_VERSION }} cargo-vet
       - run: cargo vet --locked
 
+  test_mrsv:
+    name: "Test MRSV"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo rust_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages | map(select(.name == "wol")) | first | .rust_version')"
+        id: rust_version
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.rust_version.outputs.rust_version }}
+      - run: cargo build --locked --all-features
+      - run: cargo test --locked --all-features
+
   test:
     name: "Test & lint"
     runs-on: ubuntu-latest
