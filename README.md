@@ -37,12 +37,11 @@ See `wol --help` for more information.
 - 3rd party packages: [Repology](https://repology.org/project/wol-rs/versions)
 
 For packaging, all releases have reproducible git archive and cargo vendor
-bundles attached, built and attested by a Github workflow.  You can use
-`gh attestation verify` to check these attestations. I recommend to first build
-with `--all-features`, then dump the manpage and desired completions with
-`--print-manpage` and `--print-completions`, and eventually build with
-`--features cli` to remove these options from the final binary. See arch package
-above for an example.
+bundles attached, signed by my SSH key from <https://codeberg.org/swsnr.keys>.
+I recommend to first build with `--all-features`, then dump the manpage and
+desired completions with `--print-manpage` and `--print-completions`, and
+eventually build with `--features cli` to remove these options from the final
+binary. See arch package above for an example.
 
 ## Crate
 
