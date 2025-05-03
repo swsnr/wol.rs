@@ -9,22 +9,22 @@ user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.clap]]
-version = "4.5.32"
-when = "2025-03-10"
+version = "4.5.37"
+when = "2025-04-18"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.clap_builder]]
-version = "4.5.32"
-when = "2025-03-10"
+version = "4.5.37"
+when = "2025-04-18"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.clap_complete]]
-version = "4.5.47"
-when = "2025-03-19"
+version = "4.5.48"
+when = "2025-04-28"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
@@ -44,35 +44,35 @@ user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.errno]]
-version = "0.3.9"
-when = "2024-05-08"
+version = "0.3.11"
+when = "2025-04-04"
 user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
 
 [[publisher.libc]]
-version = "0.2.171"
-when = "2025-03-11"
+version = "0.2.172"
+when = "2025-04-15"
 user-id = 55123
 user-login = "rust-lang-owner"
 
 [[publisher.linux-raw-sys]]
-version = "0.9.3"
-when = "2025-03-14"
+version = "0.9.4"
+when = "2025-04-09"
 user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
 
 [[publisher.rustix]]
-version = "1.0.3"
-when = "2025-03-18"
+version = "1.0.7"
+when = "2025-04-30"
 user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
 
 [[publisher.syn]]
-version = "2.0.100"
-when = "2025-03-09"
+version = "2.0.101"
+when = "2025-04-26"
 user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"

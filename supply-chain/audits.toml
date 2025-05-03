@@ -27,6 +27,11 @@ crate forbids unsafe code, and does not use ambient capabilities (no network, no
 Parsing code is well-tested, and fuzzed.
 """
 
+[[audits.proc-macro2]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+delta = "1.0.94 -> 1.0.95"
+
 [[audits.roff]]
 who = "Sebastian Wiesner <sebastian@swsnr.de>"
 criteria = "safe-to-deploy"
