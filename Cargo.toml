@@ -48,11 +48,3 @@ pre-release-replacements = [
     { file = "CHANGELOG.md", search = "HEAD", replace = "{{tag_name}}", exactly = 1 },
     { file = "CHANGELOG.md", search = "\\[Unreleased\\]: ", replace = "[Unreleased]: https://codeberg.org/swsnr/wol.rs/compare/{{tag_name}}...HEAD\n[{{version}}]: ", exactly = 1 },
 ]
-# Github Actions does this for us
-verify = false
-# The release workflow does this for us
-publish = false
-# We push commit and tag separately to make sure the release workflow only runs
-# if the pipeline's good; release tag rules will prevent us from pushing a tag
-# for a commit which is not green
-push = false

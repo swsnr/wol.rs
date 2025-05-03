@@ -1,3 +1,6 @@
 /.vscode/
 
 /target/
+
+/dist/
+/vendor/
