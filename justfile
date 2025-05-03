@@ -25,4 +25,4 @@ test-stable:
     cargo +stable clippy --locked --all-targets --all-features
     cargo +stable test --locked --all-features
 
-test-all: vet test-msrv lint-stable test-stable test-windows
+test-all: vet test-msrv lint-stable test-stable
