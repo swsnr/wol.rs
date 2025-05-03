@@ -12,6 +12,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Changed
+- Move repository to <https://codeberg.org/swsnr/wol.rs>.
+
 ## [0.3.0] – 2025-03-30
 
 ### Added
@@ -40,9 +43,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 Preliminary release of command line utility and crate.
 
-[Unreleased]: https://github.com/swsnr/wol.rs/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/swsnr/wol.rs/compare/v0.2.3...v0.3.0
-[0.2.3]: https://github.com/swsnr/wol.rs/compare/v0.2.2...v0.2.3
-[0.2.2]: https://github.com/swsnr/wol.rs/compare/v0.2.1...v0.2.2
-[0.2.1]: https://github.com/swsnr/wol.rs/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/swsnr/wol.rs/releases/tag/v0.2.0
+[Unreleased]: https://codeberg.org/swsnr/wol.rs/compare/v0.3.0...HEAD
+[0.3.0]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.3...v0.3.0
+[0.2.3]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.2...v0.2.3
+[0.2.2]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.1...v0.2.2
+[0.2.1]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.0...v0.2.1
+[0.2.0]: https://codeberg.org/swsnr/wol.rs/releases/tag/v0.2.0
