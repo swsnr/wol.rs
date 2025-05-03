@@ -240,7 +240,7 @@ impl SendMagicPacket for UdpSocket {
             let size = self.send_to(&packet, addr)?;
             // Same here
             assert!(size == packet.len());
-        };
+        }
         Ok(())
     }
 }
