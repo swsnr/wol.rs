@@ -32,6 +32,7 @@ See `wol --help` for more information.
 
 ## Installation
 
+- Linux binary attached to [releases](https://codeberg.org/swsnr/wol.rs/releases)
 - [Arch binary package](https://build.opensuse.org/package/show/home:swsnr/wol-rs)
 - `cargo install --all-features wol`
 - 3rd party packages: [Repology](https://repology.org/project/wol-rs/versions)
