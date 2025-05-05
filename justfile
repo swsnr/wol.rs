@@ -3,6 +3,9 @@ MSRV := `cargo metadata --no-deps --format-version 1 | jq -r '.packages | map(se
 default:
     just --list
 
+clean:
+    rm -rf dist vendor
+
 vet:
     cargo vet --locked
 
