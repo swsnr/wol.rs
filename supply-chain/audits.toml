@@ -7,6 +7,12 @@ criteria = "safe-to-deploy"
 version = "0.2.26"
 notes = "No unsafe code, and only standard file system access."
 
+[[audits.clap_mangen]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+delta = "0.2.26 -> 0.2.28"
+notes = "No actual code changes"
+
 [[audits.errno]]
 who = "Sebastian Wiesner <sebastian@swsnr.de>"
 criteria = "safe-to-deploy"
