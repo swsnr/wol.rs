@@ -4,7 +4,7 @@ default:
     just --list
 
 clean:
-    rm -rf dist vendor
+    rm -rf dist
 
 vet:
     cargo vet --locked
@@ -35,29 +35,6 @@ _dist:
     mkdir -p dist
     curl https://codeberg.org/swsnr.keys > dist/.key
 
-# Build and sign a reproducible archive of cargo vendor sources
-_vendor: _dist
-    rm -rf vendor/
-    cargo vendor --locked
-    echo SOURCE_DATE_EPOCH="$(env LC_ALL=C TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" HEAD)"
-    # See https://reproducible-builds.org/docs/archives/
-    env LC_ALL=C TZ=UTC0 tar --numeric-owner --owner 0 --group 0 \
-        --sort name --mode='go+u,go-w' --format=posix \
-        --pax-option=exthdr.name=%d/PaxHeaders/%f \
-        --pax-option=delete=atime,delete=ctime \
-        --mtime="$(env LC_ALL=C TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%SZ' --format="%cd" HEAD)" \
-        -c -f "dist/wol-$(git describe)-vendor.tar.zst" \
-        --zstd vendor
-    ssh-keygen -Y sign -f dist/.key -n file "dist/wol-$(git describe)-vendor.tar.zst"
-
-# Build and sign a reproducible git archive bundle
-_git-archive: _dist
-    env LC_ALL=C TZ=UTC0 git archive --format tar \
-        --prefix "wol-$(git describe)/" \
-        --output "dist/wol-$(git describe).tar" HEAD
-    zstd --rm "dist/wol-$(git describe).tar"
-    ssh-keygen -Y sign -f dist/.key -n file "dist/wol-$(git describe).tar.zst"
-
 [linux]
 package-linux: _dist
     cargo build --all-features --locked --release
@@ -85,7 +62,7 @@ _package-os: package-linux
 [windows]
 _package-os: package-windows
 
-package: _git-archive _vendor _package-os
+package: _package-os
 
 _post-release:
     @echo "Create a release for the new version at https://codeberg.org/swsnr/wol.rs/tags"
