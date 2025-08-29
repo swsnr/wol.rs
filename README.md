@@ -62,7 +62,4 @@ See <https://docs.rs/wol> for detailed documentation.
 
 Copyright Sebastian Wiesner <sebastian@swsnr.de>
 
-This program is subject to the terms of the Mozilla Public
-License, v. 2.0, see [LICENSE](LICENSE), unless otherwise noted;
-some files are subject to the terms of the Apache 2.0 license,
-see <http://www.apache.org/licenses/LICENSE-2.0>
+Licensed under the EUPL, see <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>

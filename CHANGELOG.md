@@ -12,6 +12,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Changed
+- Change license to EUPL 1.2.
+
 ## [0.3.1] – 2025-05-03
 
 ### Changed
