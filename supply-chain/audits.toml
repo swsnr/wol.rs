@@ -1,6 +1,11 @@
 
 # cargo-vet audits file
 
+[[audits.bitflags]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+delta = "2.9.1 -> 2.9.3"
+
 [[audits.clap_mangen]]
 who = "Sebastian Wiesner <sebastian@swsnr.de>"
 criteria = "safe-to-deploy"
@@ -53,6 +58,12 @@ who = "Sebastian Wiesner <sebastian@swsnr.de>"
 criteria = "safe-to-deploy"
 version = "0.2.2"
 notes = "No unsafe, no large ambient capabilities like file system access."
+
+[[audits.terminal_size]]
+who = "Sebastian Wiesner <sebastian@swsnr.de>"
+criteria = "safe-to-deploy"
+delta = "0.4.2 -> 0.4.3"
+notes = "Only dependency updates, no code change"
 
 [[audits.windows-link]]
 who = "Sebastian Wiesner <sebastian@swsnr.de>"
