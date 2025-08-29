@@ -12,6 +12,8 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+## [0.4.0] – 2025-08-29
+
 ### Changed
 - Change license to EUPL 1.2.
 
@@ -48,7 +50,8 @@ Github workflows then take care of building release artifacts and publishing the
 
 Preliminary release of command line utility and crate.
 
-[Unreleased]: https://codeberg.org/swsnr/wol.rs/compare/v0.3.1...HEAD
+[Unreleased]: https://codeberg.org/swsnr/wol.rs/compare/v0.4.0...HEAD
+[0.4.0]: https://codeberg.org/swsnr/wol.rs/compare/v0.3.1...v0.4.0
 [0.3.1]: https://codeberg.org/swsnr/wol.rs/compare/v0.3.0...v0.3.1
 [0.3.0]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.3...v0.3.0
 [0.2.3]: https://codeberg.org/swsnr/wol.rs/compare/v0.2.2...v0.2.3
