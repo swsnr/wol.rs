@@ -1,4 +1,4 @@
-MSRV := `cargo metadata --no-deps --format-version 1 | jq -r '.packages | map(select(.name == "wol")) | first | .rust_version'`
+MSRV := `cargo +stable metadata --no-deps --format-version 1 | jq -r '.packages | map(select(.name == "wol")) | first | .rust_version'`
 
 default:
     just --list
@@ -7,7 +7,7 @@ clean:
     rm -rf dist
 
 vet:
-    cargo vet --locked
+    cargo +stable vet --locked
 
 test-msrv:
     cargo +{{MSRV}} build --locked --all-features
