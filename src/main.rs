@@ -50,16 +50,11 @@ struct ResolvedWakeUpTarget {
     secure_on: Option<SecureOn>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 enum ResolveMode {
+    #[default]
     Default,
     PreferIpv6,
-}
-
-impl Default for ResolveMode {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 #[derive(Debug)]
