@@ -41,11 +41,11 @@ use std::time::Duration;
 
 use clap::{ArgAction, Parser, ValueHint, builder::ArgPredicate};
 use wol::file::MagicPacketDestination;
-use wol::{MacAddr6, SecureOn};
+use wol::{MacAddress, SecureOn};
 
 #[derive(Debug)]
 struct ResolvedWakeUpTarget {
-    hardware_address: MacAddr6,
+    hardware_address: MacAddress,
     socket_addr: SocketAddr,
     secure_on: Option<SecureOn>,
 }
@@ -59,7 +59,7 @@ enum ResolveMode {
 
 #[derive(Debug)]
 struct WakeUpTarget {
-    hardware_address: MacAddr6,
+    hardware_address: MacAddress,
     host: MagicPacketDestination,
     port: u16,
     secure_on: Option<SecureOn>,
@@ -118,6 +118,12 @@ https://codeberg.org/swsnr/wol.rs
 Licensed under the EUPL
 
 See <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>";
+
+fn parse_six_bytes<T: From<[u8; 6]>>(s: &str) -> std::result::Result<T, macaddr::ParseError> {
+    macaddr::MacAddr6::from_str(s)
+        .map(macaddr::MacAddr6::into_array)
+        .map(From::from)
+}
 
 #[derive(Parser, Debug, Clone)]
 #[command(
@@ -203,15 +209,16 @@ struct CliArgs {
     ///
     /// The password is in the same format as a MAC address, i.e.
     /// XX-XX-XX-XX-XX-XX or XX:XX:XX:XX:XX:XX.
-    #[arg(long = "passwd")]
+    #[arg(long = "passwd", value_parser = parse_six_bytes::<SecureOn>)]
     passwd: Option<SecureOn>,
     /// Hardware addresses to wake up.
     #[arg(
         value_name = "MAC-ADDRESS",
+        value_parser = parse_six_bytes::<MacAddress>,
         required_unless_present("file"),
         verbatim_doc_comment
     )]
-    hardware_addresses: Vec<wol::MacAddr6>,
+    hardware_addresses: Vec<wol::MacAddress>,
 }
 
 impl CliArgs {

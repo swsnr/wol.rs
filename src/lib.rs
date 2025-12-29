@@ -48,7 +48,7 @@
 //! ```no_run
 //! use std::str::FromStr;
 //! use std::net::Ipv4Addr;
-//! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
+//! let mac_address = wol::MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]);
 //! wol::send_magic_packet(mac_address, None, (Ipv4Addr::BROADCAST, 9).into()).unwrap();
 //! ```
 //!
@@ -59,7 +59,7 @@
 //! use std::net::{Ipv4Addr, UdpSocket};
 //! use wol::SendMagicPacket;
 //! let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
-//! let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
+//! let mac_address = wol::MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]);
 //!
 //! socket.send_magic_packet(mac_address, None, (Ipv4Addr::BROADCAST, 9)).unwrap();
 //! ```
@@ -73,16 +73,62 @@
 //!
 //! This crate supports SecureON magic packets.
 
+use std::fmt::Display;
 use std::io::Write;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
-use std::str::FromStr;
-
-/// MAC address types.
-pub use macaddr;
-pub use macaddr::MacAddr6;
 
 #[cfg(feature = "file")]
 pub mod file;
+
+/// A MAC address as a newtype wrapper around `[u8; 6]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MacAddress([u8; 6]);
+
+impl MacAddress {
+    /// Create a MAC address from six bytes.
+    #[must_use]
+    pub fn new(address: [u8; 6]) -> Self {
+        Self(address)
+    }
+}
+
+impl AsRef<[u8]> for MacAddress {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<MacAddress> for [u8; 6] {
+    fn from(value: MacAddress) -> Self {
+        value.0
+    }
+}
+
+impl From<[u8; 6]> for MacAddress {
+    fn from(value: [u8; 6]) -> Self {
+        Self(value)
+    }
+}
+
+/// Display a [`MacAddress`].
+///
+/// ```
+/// # use wol::MacAddress;
+/// let addr = MacAddress::from([0xab, 0x0d, 0xef, 0x12, 0x34, 0x56]);
+///
+/// assert_eq!(&format!("{}",    addr), "AB:0D:EF:12:34:56");
+/// assert_eq!(&format!("{:-}",  addr), "AB-0D-EF-12-34-56");
+/// ```
+impl Display for MacAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sep = if f.sign_minus() { '-' } else { ':' };
+        write!(
+            f,
+            "{:02X}{sep}{:02X}{sep}{:02X}{sep}{:02X}{sep}{:02X}{sep}{:02X}",
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5]
+        )
+    }
+}
 
 /// A SecureON token.
 ///
@@ -98,6 +144,14 @@ pub mod file;
 /// **not be assumed a secret**.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SecureOn([u8; 6]);
+
+impl SecureOn {
+    /// Create a SecureON token from six bytes.
+    #[must_use]
+    pub fn new(address: [u8; 6]) -> Self {
+        Self(address)
+    }
+}
 
 impl AsRef<[u8]> for SecureOn {
     fn as_ref(&self) -> &[u8] {
@@ -117,26 +171,22 @@ impl From<[u8; 6]> for SecureOn {
     }
 }
 
-impl FromStr for SecureOn {
-    type Err = macaddr::ParseError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        // We conveniently reuse the MAC address parser, because the SecureON
-        // token is just the same length as a MAC address.
-        MacAddr6::from_str(s).map(MacAddr6::into_array).map(Self)
+impl Display for SecureOn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", MacAddress::new(self.0))
     }
 }
 
 /// Fill a buffer with a magic packet.
 ///
 /// Fill `buffer` with a magic packet to wake up `mac_address`.
-pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
+pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddress) {
     buffer[0..6].copy_from_slice(&[0xff; 6]);
     for i in 0..16 {
         let base = (i + 1) * 6;
         // We know that `buffer` is large enough.
         #[allow(clippy::indexing_slicing)]
-        buffer[base..base + 6].copy_from_slice(mac_address.as_bytes());
+        buffer[base..base + 6].copy_from_slice(mac_address.as_ref());
     }
 }
 
@@ -147,7 +197,7 @@ pub fn fill_magic_packet(buffer: &mut [u8; 102], mac_address: MacAddr6) {
 #[allow(clippy::missing_panics_doc)]
 pub fn fill_magic_packet_secure_on(
     buffer: &mut [u8; 108],
-    mac_address: MacAddr6,
+    mac_address: MacAddress,
     secure_on: SecureOn,
 ) {
     // We know that `buffer` is >= 102 characters so this will never panic.
@@ -167,12 +217,12 @@ pub fn fill_magic_packet_secure_on(
 /// Return an error if the underlying [`Write::write_all`] fails.
 pub fn write_magic_packet<W: Write>(
     sink: &mut W,
-    mac_address: MacAddr6,
+    mac_address: MacAddress,
     secure_on: Option<SecureOn>,
 ) -> std::io::Result<()> {
     sink.write_all(&[0xff; 6])?;
     for _ in 0..16 {
-        sink.write_all(mac_address.as_bytes())?;
+        sink.write_all(mac_address.as_ref())?;
     }
     if let Some(secure_on) = secure_on {
         sink.write_all(secure_on.as_ref())?;
@@ -213,7 +263,7 @@ pub trait SendMagicPacket {
     /// Return any errors from the underlying socket I/O.
     fn send_magic_packet<A: ToSocketAddrs>(
         &self,
-        mac_address: MacAddr6,
+        mac_address: MacAddress,
         secure_on: Option<SecureOn>,
         addr: A,
     ) -> std::io::Result<()>;
@@ -222,7 +272,7 @@ pub trait SendMagicPacket {
 impl SendMagicPacket for UdpSocket {
     fn send_magic_packet<A: ToSocketAddrs>(
         &self,
-        mac_address: MacAddr6,
+        mac_address: MacAddress,
         secure_on: Option<SecureOn>,
         addr: A,
     ) -> std::io::Result<()> {
@@ -261,7 +311,7 @@ impl SendMagicPacket for UdpSocket {
 ///
 /// Return errors from underlying socket I/O.
 pub fn send_magic_packet(
-    mac_address: MacAddr6,
+    mac_address: MacAddress,
     secure_on: Option<SecureOn>,
     addr: SocketAddr,
 ) -> std::io::Result<()> {
@@ -279,11 +329,11 @@ pub fn send_magic_packet(
 mod tests {
     use crate::{fill_magic_packet, fill_magic_packet_secure_on};
 
-    use super::{MacAddr6, write_magic_packet};
+    use super::{MacAddress, write_magic_packet};
 
     #[test]
     fn test_fill_magic_packet() {
-        let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
+        let mac_address = MacAddress::from([0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33]);
         let mut buffer = [0; 102];
         fill_magic_packet(&mut buffer, mac_address);
         let expected_packet: [u8; 102] = [
@@ -311,7 +361,7 @@ mod tests {
     #[test]
     fn test_fill_magic_packet_secure_on() {
         let secure_on = [0x12, 0x13, 0x14, 0x15, 0x16, 0x42];
-        let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
+        let mac_address = MacAddress::from([0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33]);
         let mut buffer = [0; 108];
         fill_magic_packet_secure_on(&mut buffer, mac_address, secure_on.into());
         let expected_packet: [u8; 108] = [
@@ -339,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_write_magic_packet() {
-        let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
+        let mac_address = MacAddress::from([0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33]);
         let mut buffer = Vec::new();
         write_magic_packet(&mut buffer, mac_address, None).unwrap();
         let expected_packet: [u8; 102] = [
@@ -367,7 +417,7 @@ mod tests {
     #[test]
     fn test_write_magic_packet_secure_on() {
         let secure_on = [0x12, 0x13, 0x14, 0x15, 0x16, 0x42];
-        let mac_address = "26:CE:55:A5:C2:33".parse::<MacAddr6>().unwrap();
+        let mac_address = MacAddress::from([0x26, 0xCE, 0x55, 0xA5, 0xC2, 0x33]);
         let mut buffer = Vec::new();
         write_magic_packet(&mut buffer, mac_address, Some(secure_on.into())).unwrap();
         let expected_packet: [u8; 108] = [

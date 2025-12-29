@@ -23,7 +23,7 @@ use std::str::FromStr;
 
 use macaddr::MacAddr6;
 
-use crate::SecureOn;
+use crate::{MacAddress, SecureOn};
 
 /// A destination to send a magic packet to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,7 +69,7 @@ impl From<String> for MagicPacketDestination {
 /// The SecureON is given in the same format.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WakeUpTarget {
-    hardware_address: MacAddr6,
+    hardware_address: MacAddress,
     packet_destination: Option<MagicPacketDestination>,
     port: Option<u16>,
     secure_on: Option<SecureOn>,
@@ -78,7 +78,7 @@ pub struct WakeUpTarget {
 impl WakeUpTarget {
     /// Create a new wake up target for the given `hardware_address`.
     #[must_use]
-    pub fn new(hardware_address: MacAddr6) -> Self {
+    pub fn new(hardware_address: MacAddress) -> Self {
         Self {
             hardware_address,
             packet_destination: None,
@@ -89,7 +89,7 @@ impl WakeUpTarget {
 
     /// Get the hardware address.
     #[must_use]
-    pub fn hardware_address(&self) -> MacAddr6 {
+    pub fn hardware_address(&self) -> MacAddress {
         self.hardware_address
     }
 
@@ -116,7 +116,7 @@ impl WakeUpTarget {
 
     /// Change the hardware address.
     #[must_use]
-    pub fn with_hardware_address(mut self, hardware_address: MacAddr6) -> Self {
+    pub fn with_hardware_address(mut self, hardware_address: MacAddress) -> Self {
         self.hardware_address = hardware_address;
         self
     }
@@ -215,13 +215,13 @@ impl FromStr for WakeUpTarget {
             [] => Err(Self::Err::Empty),
             [field_1] => MacAddr6::from_str(field_1)
                 .map_err(Self::Err::InvalidHardwareAddress)
-                .map(Self::new),
+                .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array()))),
             [field_1, field_2] => {
                 let mut line = MacAddr6::from_str(field_1)
                     .map_err(Self::Err::InvalidHardwareAddress)
-                    .map(Self::new)?;
-                if let Ok(secure_on) = SecureOn::from_str(field_2) {
-                    line.secure_on = Some(secure_on);
+                    .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?;
+                if let Ok(secure_on) = MacAddr6::from_str(field_2) {
+                    line.secure_on = Some(SecureOn(secure_on.into_array()));
                 } else if let Ok(port) = u16::from_str(field_2) {
                     line.port = Some(port);
                 } else {
@@ -233,10 +233,10 @@ impl FromStr for WakeUpTarget {
             [field_1, field_2, field_3] => {
                 let mut line = MacAddr6::from_str(field_1)
                     .map_err(Self::Err::InvalidHardwareAddress)
-                    .map(Self::new)?;
-                match SecureOn::from_str(field_3) {
+                    .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?;
+                match MacAddr6::from_str(field_3) {
                     Ok(secure_on) => {
-                        line.secure_on = Some(secure_on);
+                        line.secure_on = Some(SecureOn(secure_on.into_array()));
                         if let Ok(port) = u16::from_str(field_2) {
                             line.port = Some(port);
                         } else {
@@ -263,13 +263,14 @@ impl FromStr for WakeUpTarget {
             }
             [field_1, field_2, field_3, field_4] => Ok(MacAddr6::from_str(field_1)
                 .map_err(Self::Err::InvalidHardwareAddress)
-                .map(Self::new)?
+                .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?
                 .with_packet_destination(Some(MagicPacketDestination::from(field_2.to_owned())))
                 .with_port(Some(
                     u16::from_str(field_3).map_err(|err| Self::Err::InvalidPort(3, err))?,
                 ))
                 .with_secure_on(Some(
-                    SecureOn::from_str(field_4)
+                    MacAddr6::from_str(field_4)
+                        .map(|secure_on| SecureOn(secure_on.into_array()))
                         .map_err(|error| Self::Err::InvalidSecureOn(4, error))?,
                 ))),
             _ => Err(Self::Err::TooManyFields(parts.len())),
@@ -381,15 +382,15 @@ mod tests {
     fn test_target_from_string_hardware_address_only() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
         );
         assert_eq!(
             WakeUpTarget::from_str("12-13-14-15-16-17").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
         );
         assert_eq!(
             WakeUpTarget::from_str("  12:13:14:15:16:17  ").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
         );
         assert_eq!(
             WakeUpTarget::from_str("  jj:13:14:15:16:17  ").unwrap_err(),
@@ -407,12 +408,12 @@ mod tests {
     fn test_target_from_string_hardware_address_and_destination() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 foo.example.com").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_dns_packet_destination("foo.example.com".into())
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.4").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_ip_packet_destination(IpAddr::from_str("192.0.2.4").unwrap())
         );
     }
@@ -421,11 +422,13 @@ mod tests {
     fn test_target_from_string_hardware_address_and_port() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 9").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap()).with_port(Some(9))
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
+                .with_port(Some(9))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 09").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap()).with_port(Some(9))
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
+                .with_port(Some(9))
         );
     }
 
@@ -433,12 +436,12 @@ mod tests {
     fn test_target_from_string_hardware_address_and_secure_on() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 aa-bb-cc-dd-ee-ff").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
-                .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
+                .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 aa-bb-cc-dd-ee-f").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_dns_packet_destination("aa-bb-cc-dd-ee-f".into())
         );
     }
@@ -447,13 +450,13 @@ mod tests {
     fn test_target_from_string_hardware_address_and_host_and_port() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 foo.example.com 23").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_dns_packet_destination("foo.example.com".into())
                 .with_port(Some(23))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.4 23").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_ip_packet_destination(IpAddr::from_str("192.0.2.4").unwrap())
                 .with_port(Some(23))
         );
@@ -467,15 +470,15 @@ mod tests {
     fn test_target_from_string_hardware_address_and_host_and_secure_on() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 foo.example.com aa-bb-cc-dd-ee-ff").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_dns_packet_destination("foo.example.com".into())
-                .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+                .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.4 aa-bb-cc-dd-ee-ff").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_ip_packet_destination(IpAddr::from_str("192.0.2.4").unwrap())
-                .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+                .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.4 aa-bb-cc-dd-ee-f").unwrap_err(),
@@ -487,9 +490,9 @@ mod tests {
     fn test_target_from_string_hardware_address_and_port_and_secure_on() {
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 42 aa-bb-cc-dd-ee-ff").unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_port(Some(42))
-                .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+                .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 42 aa-bb-cc-dd-ee-f").unwrap_err(),
@@ -501,7 +504,10 @@ mod tests {
     fn test_target_from_string_full() {
         let line =
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.42 42 aa-bb-cc-dd-ee-ff").unwrap();
-        assert_eq!(line.hardware_address().to_string(), "12:13:14:15:16:17");
+        assert_eq!(
+            line.hardware_address(),
+            MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17])
+        );
         assert_eq!(
             line.packet_destination(),
             Some(&MagicPacketDestination::Ip(
@@ -549,13 +555,13 @@ mod tests {
                     WakeUpTargetParseError::TooManyFields(5)
                 )),
                 Ok(
-                    WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+                    WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                         .with_ip_packet_destination(IpAddr::from_str("192.0.2.42").unwrap())
                         .with_port(Some(42))
-                        .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+                        .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
                 ),
                 Ok(
-                    WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+                    WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                         .with_port(Some(23))
                 )
             ]
@@ -588,14 +594,15 @@ mod tests {
         );
         assert_eq!(
             targets.next().unwrap().unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap())
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
                 .with_ip_packet_destination(IpAddr::from_str("192.0.2.42").unwrap())
                 .with_port(Some(42))
-                .with_secure_on(Some(SecureOn::from_str("aa-bb-cc-dd-ee-ff").unwrap()))
+                .with_secure_on(Some(SecureOn::from([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])))
         );
         assert_eq!(
             targets.next().unwrap().unwrap(),
-            WakeUpTarget::new(MacAddr6::from_str("12:13:14:15:16:17").unwrap()).with_port(Some(23))
+            WakeUpTarget::new(MacAddress::from([0x12, 0x13, 0x14, 0x15, 0x16, 0x17]))
+                .with_port(Some(23))
         );
         assert!(targets.next().is_none());
     }

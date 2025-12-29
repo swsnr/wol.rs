@@ -12,8 +12,12 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Added
+- Add `wol::MacAddress` to replace `macaddr::MacAddr6` in the public API.
+
 ### Changed
 - Make `file` module optional behind `file` feature.
+- No longer expose types of the unmaintained `macaddr6` in public API.
 
 ## [0.4.0] – 2025-08-29
 
