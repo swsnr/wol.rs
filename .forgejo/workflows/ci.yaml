@@ -49,4 +49,4 @@ jobs:
       - run: cargo build --locked --all-features
       - run: cargo clippy --locked --all-features --all-targets
       - run: cargo test --locked --all-features
-      - run: cargo doc --locked
+      - run: cargo doc --locked --features file

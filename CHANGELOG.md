@@ -12,6 +12,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ## [Unreleased]
 
+### Changed
+- Make `file` module optional behind `file` feature.
+
 ## [0.4.0] – 2025-08-29
 
 ### Changed

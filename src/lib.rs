@@ -81,6 +81,7 @@ use std::str::FromStr;
 pub use macaddr;
 pub use macaddr::MacAddr6;
 
+#[cfg(feature = "file")]
 pub mod file;
 
 /// A SecureON token.
