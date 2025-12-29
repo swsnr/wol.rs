@@ -119,12 +119,6 @@ Licensed under the EUPL
 
 See <https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12>";
 
-fn parse_six_bytes<T: From<[u8; 6]>>(s: &str) -> std::result::Result<T, macaddr::ParseError> {
-    macaddr::MacAddr6::from_str(s)
-        .map(macaddr::MacAddr6::into_array)
-        .map(From::from)
-}
-
 #[derive(Parser, Debug, Clone)]
 #[command(
     version,
@@ -209,12 +203,11 @@ struct CliArgs {
     ///
     /// The password is in the same format as a MAC address, i.e.
     /// XX-XX-XX-XX-XX-XX or XX:XX:XX:XX:XX:XX.
-    #[arg(long = "passwd", value_parser = parse_six_bytes::<SecureOn>)]
+    #[arg(long = "passwd")]
     passwd: Option<SecureOn>,
     /// Hardware addresses to wake up.
     #[arg(
         value_name = "MAC-ADDRESS",
-        value_parser = parse_six_bytes::<MacAddress>,
         required_unless_present("file"),
         verbatim_doc_comment
     )]

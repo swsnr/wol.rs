@@ -15,7 +15,7 @@ rust-version = "1.85"
 # Build the CLI tool
 cli = ["file", "dep:clap"]
 # Support for wake-up files
-file = ["dep:macaddr"]
+file = []
 # Include the manpage in the CLI tool, behind a --print-manpage flag
 manpage = ["dep:clap_mangen"]
 # Include shell completions in the CLI tool, behind a --print-completions flag
@@ -27,7 +27,6 @@ required-features = ["cli"]
 
 [dependencies]
 winnow = "0.7.14"
-macaddr = { version = "1.0.1", optional = true }
 # Optional dependencies for CLI
 clap = { version = "4.5.32", default-features = false, features = [
     "std",

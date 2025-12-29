@@ -17,7 +17,9 @@ Github workflows then take care of building release artifacts and publishing the
 
 ### Changed
 - Make `file` module optional behind `file` feature.
-- No longer expose types of the unmaintained `macaddr6` in public API.
+
+### Removed
+- Remove unmaintained `macaddr` dependency.
 
 ## [0.4.0] – 2025-08-29
 

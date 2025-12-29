@@ -21,9 +21,7 @@ use std::net::IpAddr;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use macaddr::MacAddr6;
-
-use crate::{MacAddress, SecureOn};
+use crate::{MacAddress, ParseError, SecureOn};
 
 /// A destination to send a magic packet to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,11 +164,11 @@ pub enum WakeUpTargetParseError {
     /// The string was empty or consistent only of whitespace,
     Empty,
     /// The hardware address in field 1 was invalid.
-    InvalidHardwareAddress(macaddr::ParseError),
+    InvalidHardwareAddress(ParseError),
     /// The port number in the given field was invalid.
     InvalidPort(u8, ParseIntError),
     /// The SecureON token in the given was invalid.
-    InvalidSecureOn(u8, macaddr::ParseError),
+    InvalidSecureOn(u8, ParseError),
     /// The line had more than the expected number of fields.
     TooManyFields(usize),
 }
@@ -213,15 +211,15 @@ impl FromStr for WakeUpTarget {
         let parts = s.split_ascii_whitespace().collect::<Vec<_>>();
         match parts[..] {
             [] => Err(Self::Err::Empty),
-            [field_1] => MacAddr6::from_str(field_1)
+            [field_1] => MacAddress::from_str(field_1)
                 .map_err(Self::Err::InvalidHardwareAddress)
-                .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array()))),
+                .map(Self::new),
             [field_1, field_2] => {
-                let mut line = MacAddr6::from_str(field_1)
+                let mut line = MacAddress::from_str(field_1)
                     .map_err(Self::Err::InvalidHardwareAddress)
-                    .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?;
-                if let Ok(secure_on) = MacAddr6::from_str(field_2) {
-                    line.secure_on = Some(SecureOn(secure_on.into_array()));
+                    .map(Self::new)?;
+                if let Ok(secure_on) = SecureOn::from_str(field_2) {
+                    line.secure_on = Some(secure_on);
                 } else if let Ok(port) = u16::from_str(field_2) {
                     line.port = Some(port);
                 } else {
@@ -231,12 +229,12 @@ impl FromStr for WakeUpTarget {
                 Ok(line)
             }
             [field_1, field_2, field_3] => {
-                let mut line = MacAddr6::from_str(field_1)
+                let mut line = MacAddress::from_str(field_1)
                     .map_err(Self::Err::InvalidHardwareAddress)
-                    .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?;
-                match MacAddr6::from_str(field_3) {
+                    .map(Self::new)?;
+                match SecureOn::from_str(field_3) {
                     Ok(secure_on) => {
-                        line.secure_on = Some(SecureOn(secure_on.into_array()));
+                        line.secure_on = Some(secure_on);
                         if let Ok(port) = u16::from_str(field_2) {
                             line.port = Some(port);
                         } else {
@@ -261,16 +259,15 @@ impl FromStr for WakeUpTarget {
                     }
                 }
             }
-            [field_1, field_2, field_3, field_4] => Ok(MacAddr6::from_str(field_1)
+            [field_1, field_2, field_3, field_4] => Ok(MacAddress::from_str(field_1)
                 .map_err(Self::Err::InvalidHardwareAddress)
-                .map(|macaddr| Self::new(MacAddress::from(macaddr.into_array())))?
+                .map(Self::new)?
                 .with_packet_destination(Some(MagicPacketDestination::from(field_2.to_owned())))
                 .with_port(Some(
                     u16::from_str(field_3).map_err(|err| Self::Err::InvalidPort(3, err))?,
                 ))
                 .with_secure_on(Some(
-                    MacAddr6::from_str(field_4)
-                        .map(|secure_on| SecureOn(secure_on.into_array()))
+                    SecureOn::from_str(field_4)
                         .map_err(|error| Self::Err::InvalidSecureOn(4, error))?,
                 ))),
             _ => Err(Self::Err::TooManyFields(parts.len())),
@@ -369,6 +366,8 @@ pub fn from_reader<R: BufRead>(reader: R) -> impl Iterator<Item = Result<WakeUpT
 mod tests {
     use std::{io::BufReader, net::IpAddr, str::FromStr};
 
+    use crate::ParseErrorKind;
+
     use super::*;
 
     #[test]
@@ -394,13 +393,15 @@ mod tests {
         );
         assert_eq!(
             WakeUpTarget::from_str("  jj:13:14:15:16:17  ").unwrap_err(),
-            WakeUpTargetParseError::InvalidHardwareAddress(macaddr::ParseError::InvalidCharacter(
-                'j', 1
-            ))
+            WakeUpTargetParseError::InvalidHardwareAddress(ParseError {
+                kind: ParseErrorKind::InvalidByteLiteral
+            })
         );
         assert_eq!(
             WakeUpTarget::from_str("  12:13:14:15:16:17:18  ").unwrap_err(),
-            WakeUpTargetParseError::InvalidHardwareAddress(macaddr::ParseError::InvalidLength(20))
+            WakeUpTargetParseError::InvalidHardwareAddress(ParseError {
+                kind: ParseErrorKind::TrailingBytes
+            })
         );
     }
 
@@ -482,7 +483,12 @@ mod tests {
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 192.0.2.4 aa-bb-cc-dd-ee-f").unwrap_err(),
-            WakeUpTargetParseError::InvalidSecureOn(3, macaddr::ParseError::InvalidLength(16))
+            WakeUpTargetParseError::InvalidSecureOn(
+                3,
+                ParseError {
+                    kind: ParseErrorKind::InvalidByteLiteral
+                }
+            )
         );
     }
 
@@ -496,7 +502,12 @@ mod tests {
         );
         assert_eq!(
             WakeUpTarget::from_str("12:13:14:15:16:17 42 aa-bb-cc-dd-ee-f").unwrap_err(),
-            WakeUpTargetParseError::InvalidSecureOn(3, macaddr::ParseError::InvalidLength(16))
+            WakeUpTargetParseError::InvalidSecureOn(
+                3,
+                ParseError {
+                    kind: ParseErrorKind::InvalidByteLiteral
+                }
+            )
         );
     }
 
