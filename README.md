@@ -52,7 +52,7 @@ You can also use `wol` as a Rust crate, with `cargo add wol`:
 use std::str::FromStr;
 use std::net::Ipv4Addr;
 
-let mac_address = wol::MacAddr6::from_str("12-13-14-15-16-17").unwrap();
+let mac_address = wol::MacAddress::from_str("12-13-14-15-16-17").unwrap();
 wol::send_magic_packet(mac_address, None, (Ipv4Addr::BROADCAST, 9).into()).unwrap();
 ```
 
