@@ -63,13 +63,6 @@ user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
 
-[[publisher.memchr]]
-version = "2.7.6"
-when = "2025-09-25"
-user-id = 189
-user-login = "BurntSushi"
-user-name = "Andrew Gallant"
-
 [[publisher.rustix]]
 version = "1.1.2"
 when = "2025-09-09"
@@ -161,13 +154,6 @@ user-id = 64539
 user-login = "kennykerr"
 user-name = "Kenny Kerr"
 
-[[publisher.winnow]]
-version = "0.7.14"
-when = "2025-11-26"
-user-id = 6743
-user-login = "epage"
-user-name = "Ed Page"
-
 [audits.embark-studios.audits]
 
 [[audits.google.audits.bitflags]]
@@ -232,8 +218,8 @@ who = "Lukasz Anforowicz <lukasza@chromium.org>"
 criteria = "safe-to-deploy"
 version = "1.0.78"
 notes = """
-Grepped for \"crypt\", \"cipher\", \"fs\", \"net\" - there were no hits
-(except for a benign \"fs\" hit in a doc comment)
+Grepped for "crypt", "cipher", "fs", "net" - there were no hits
+(except for a benign "fs" hit in a doc comment)
 
 Notes from the `unsafe` review can be found in https://crrev.com/c/5385745.
 """
@@ -345,8 +331,8 @@ who = "Lukasz Anforowicz <lukasza@chromium.org>"
 criteria = "safe-to-deploy"
 version = "1.0.35"
 notes = """
-Grepped for \"unsafe\", \"crypt\", \"cipher\", \"fs\", \"net\" - there were no hits
-(except for benign \"net\" hit in tests and \"fs\" hit in README.md)
+Grepped for "unsafe", "crypt", "cipher", "fs", "net" - there were no hits
+(except for benign "net" hit in tests and "fs" hit in README.md)
 """
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
