@@ -26,7 +26,6 @@ name = "wol"
 required-features = ["cli"]
 
 [dependencies]
-winnow = "0.7.14"
 # Optional dependencies for CLI
 clap = { version = "4.5.32", default-features = false, features = [
     "std",

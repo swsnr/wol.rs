@@ -179,221 +179,17 @@ impl Display for SecureOn {
     }
 }
 
-mod parser {
-    use winnow::{
-        ascii::hex_uint,
-        combinator::{eof, terminated, trace},
-        error::ContextError,
-        prelude::*,
-        stream::{AsBStr, AsChar, Compare, Stream, StreamIsPartial},
-        token::{one_of, take_while},
-    };
-
-    /// Kind of parse error.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub enum ParseErrorKind {
-        /// An invalid byte literal.
-        InvalidByteLiteral,
-        /// An invalid separator.
-        InvalidSeparator,
-        /// Trailing data after bytes.
-        TrailingBytes,
-    }
-
-    fn hex_byte<Input>(input: &mut Input) -> winnow::Result<u8, ContextError<ParseErrorKind>>
-    where
-        Input: StreamIsPartial + Stream<Slice = Input>,
-        <Input as Stream>::Token: AsChar,
-        <Input as Stream>::Slice: AsBStr,
-    {
-        trace(
-            "hex_byte",
-            take_while(2, AsChar::is_hex_digit)
-                .and_then(hex_uint)
-                .context(ParseErrorKind::InvalidByteLiteral),
-        )
-        .parse_next(input)
-    }
-
-    /// Parse an EUI 48 address, i.e. a sequence of six [`hex_byte`s](`hex_byte`)
-    /// separated be either `-` or `:`.
-    pub fn eui48<Input>(input: &mut Input) -> winnow::Result<[u8; 6], ContextError<ParseErrorKind>>
-    where
-        Input: StreamIsPartial + Stream<Slice = Input> + Compare<char>,
-        <Input as Stream>::Token: AsChar + Clone,
-        <Input as Stream>::Slice: AsBStr,
-    {
-        let (first_byte, separator) = (
-            hex_byte,
-            one_of(('-', ':')).context(ParseErrorKind::InvalidSeparator),
-        )
-            .parse_next(input)?;
-        let separator = separator.as_char();
-        Ok([
-            first_byte,
-            terminated(
-                hex_byte,
-                separator.context(ParseErrorKind::InvalidSeparator),
-            )
-            .parse_next(input)?,
-            terminated(
-                hex_byte,
-                separator.context(ParseErrorKind::InvalidSeparator),
-            )
-            .parse_next(input)?,
-            terminated(
-                hex_byte,
-                separator.context(ParseErrorKind::InvalidSeparator),
-            )
-            .parse_next(input)?,
-            terminated(
-                hex_byte,
-                separator.context(ParseErrorKind::InvalidSeparator),
-            )
-            .parse_next(input)?,
-            hex_byte.parse_next(input)?,
-        ])
-    }
-
-    pub fn only_eui48<Input>(
-        input: &mut Input,
-    ) -> winnow::Result<[u8; 6], ContextError<ParseErrorKind>>
-    where
-        Input: StreamIsPartial + Stream<Slice = Input> + Compare<char>,
-        <Input as Stream>::Token: AsChar + Clone,
-        <Input as Stream>::Slice: AsBStr,
-    {
-        terminated(eui48, eof.context(ParseErrorKind::TrailingBytes)).parse_next(input)
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use winnow::Parser;
-
-        use super::*;
-
-        #[test]
-        fn valid_eui48() {
-            assert_eq!(
-                eui48.parse("12-13-14-15-16-17").unwrap(),
-                [0x12, 0x13, 0x14, 0x15, 0x16, 0x17]
-            );
-            assert_eq!(
-                eui48.parse("aa:BB:cc:DD:ee:FF").unwrap(),
-                [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
-            );
-        }
-
-        #[test]
-        fn invalid_initial_separators() {
-            let error = eui48.parse("12|13-14-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 2);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidSeparator]
-            );
-        }
-
-        #[test]
-        fn mismatching_followup_separator() {
-            let error = eui48.parse("12:13-14-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 5);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidSeparator]
-            );
-        }
-
-        #[test]
-        fn missing_lead_zero() {
-            let error: winnow::error::ParseError<&str, ContextError<ParseErrorKind>> =
-                eui48.parse("12-13-4-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 6);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidByteLiteral]
-            );
-        }
-
-        #[test]
-        fn invalid_hex_character_after_separator() {
-            let error = eui48.parse("12-13-z1-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 6);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidByteLiteral]
-            );
-        }
-
-        #[test]
-        fn invalid_hex_character_before_separator() {
-            let error = eui48.parse("12-13-1z-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 6);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidByteLiteral]
-            );
-        }
-
-        #[test]
-        fn too_short() {
-            let error = eui48.parse("12-15-16-17").unwrap_err();
-            assert_eq!(error.offset(), 11);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidSeparator]
-            );
-        }
-
-        #[test]
-        fn too_short_byte() {
-            let error = eui48.parse("12-15-16-17-3").unwrap_err();
-            assert_eq!(error.offset(), 12);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::InvalidByteLiteral]
-            );
-        }
-
-        #[test]
-        fn too_long() {
-            let error = eui48.parse("12-13-14-15-16-17-18").unwrap_err();
-            assert_eq!(error.offset(), 17);
-            let error = error.into_inner();
-            assert!(error.context().collect::<Vec<_>>().is_empty());
-        }
-
-        #[test]
-        fn too_long_with_eof() {
-            let error = only_eui48.parse("12-13-14-15-16-17-18").unwrap_err();
-            assert_eq!(error.offset(), 17);
-            let error = error.into_inner();
-            assert_eq!(
-                error.context().collect::<Vec<_>>(),
-                vec![&ParseErrorKind::TrailingBytes]
-            );
-        }
-    }
-}
-
-pub use parser::ParseErrorKind;
-
-fn eui48_from_string(s: &str) -> Result<[u8; 6], ParseError> {
-    use winnow::Parser;
-    parser::only_eui48.parse(s).map_err(|error| ParseError {
-        kind: *error
-            .into_inner()
-            .context()
-            .next()
-            .expect("No kind set on error"),
-    })
+/// Kind of parse error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ParseErrorKind {
+    /// The input was too short to represent a EUI48 address.
+    TooShort,
+    /// An invalid separator.
+    InvalidSeparator,
+    /// A byte literal was invalid.
+    InvalidByteLiteral,
+    /// Trailing bytes where found in input.
+    TrailingBytes,
 }
 
 /// A parse error.
@@ -406,6 +202,7 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
             ParseErrorKind::InvalidByteLiteral => "invalid byte literal found in string",
+            ParseErrorKind::TooShort => "input too short",
             ParseErrorKind::InvalidSeparator => "invalid separator found in string",
             ParseErrorKind::TrailingBytes => "trailing bytes found in string",
         }
@@ -421,6 +218,46 @@ impl ParseError {
     pub fn kind(&self) -> ParseErrorKind {
         self.kind
     }
+}
+
+#[inline]
+fn parse_eui48_with_sep(s: &str, sep: u8) -> Result<[u8; 6], ParseErrorKind> {
+    let mut addr = [0; 6];
+    let mut last_field = 0;
+    for (i, byte_literal) in s.as_bytes().split(|b| *b == sep).enumerate() {
+        match addr.get_mut(i) {
+            Some(byte) => {
+                last_field = i;
+                if byte_literal.len() != 2 {
+                    return Err(ParseErrorKind::InvalidByteLiteral);
+                }
+                // TODO: use u8::from_ascii once stabilized
+                *byte = u8::from_str_radix(
+                    std::str::from_utf8(byte_literal)
+                        // we can safely unwrap here, because the original input is valid
+                        // UTF-8 and we're not splitting inside code points.
+                        .map_err(|_| ParseErrorKind::InvalidByteLiteral)?,
+                    16,
+                )
+                .map_err(|_| ParseErrorKind::InvalidByteLiteral)?;
+            }
+            None => return Err(ParseErrorKind::TrailingBytes),
+        }
+    }
+    if last_field == addr.len() - 1 {
+        Ok(addr)
+    } else {
+        Err(ParseErrorKind::TooShort)
+    }
+}
+
+fn parse_eui48(s: &str) -> Result<[u8; 6], ParseError> {
+    match s.as_bytes().get(2) {
+        None => Err(ParseErrorKind::TooShort),
+        Some(sep @ (b'-' | b':')) => parse_eui48_with_sep(s, *sep),
+        Some(_) => Err(ParseErrorKind::InvalidSeparator),
+    }
+    .map_err(|kind| ParseError { kind })
 }
 
 /// Parse a MAC address from a string:
@@ -439,7 +276,7 @@ impl FromStr for MacAddress {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        eui48_from_string(s).map(Self::new)
+        parse_eui48(s).map(Self::new)
     }
 }
 
@@ -458,7 +295,7 @@ impl FromStr for SecureOn {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        eui48_from_string(s).map(Self::new)
+        parse_eui48(s).map(Self::new)
     }
 }
 
@@ -615,6 +452,40 @@ mod tests {
     use crate::{fill_magic_packet, fill_magic_packet_secure_on};
 
     use super::{MacAddress, write_magic_packet};
+
+    mod parse {
+        use super::super::*;
+
+        #[test]
+        fn valid_eui48() {
+            assert_eq!(
+                parse_eui48("12-13-14-15-16-17").unwrap(),
+                [0x12, 0x13, 0x14, 0x15, 0x16, 0x17]
+            );
+            assert_eq!(
+                parse_eui48("aa:BB:cc:DD:ee:FF").unwrap(),
+                [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
+            );
+        }
+
+        #[test]
+        fn invalid_eui48() {
+            let cases = [
+                "12|13-14-15-16-17", // Invalid separator
+                "12:13-14-15-16-17", // Mixed separators
+                "12-13-4-15-16-17",  // Missing leading zero
+                "12-13-z1-15-16-17", // Invalid hex char after separator
+                "12-13-1z-15-16-17", // Invalid hex char before separator
+                "12-15-16-17",       // Too short
+                "12-15-16-17-3",
+                "12-13-14-15-16-17-18", // Too long
+            ];
+            for case in cases {
+                let result = parse_eui48(case);
+                assert!(result.is_err(), "{case}: {result:?}");
+            }
+        }
+    }
 
     #[test]
     fn test_fill_magic_packet() {
